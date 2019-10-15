@@ -1,7 +1,4 @@
 \dontrun{
-  # creds = git2r::cred_ssh_key("~/.ssh/id_rsa.pub","~/.ssh/id_rsa")
-  # devtools::install_git("git@gitlab.lanl.gov:dfrancom/bass_devel.git",credentials = creds)
-  
   ## simulate data (Friedman function)
 f<-function(x){
   10*sin(pi*x[,1]*x[,2])+20*(x[,3]-.5)^2+10*x[,4]+5*x[,5]
@@ -16,10 +13,12 @@ X<-cbind(rep(xfunc,each=n),kronecker(rep(1,nfunc),x)) # to get y
 y<-matrix(f(X),nrow=n)+rnorm(n*nfunc,0,sigma)
 
 ## fit BASS
-mod<-bassPCA(x,y,n.pc=5,n.cores=min(10,parallel::detectCores()))
+mod<-bassPCA(x,y,n.pc=5,n.cores=min(5,parallel::detectCores()))
 plot(mod$mod.list[[1]])
 plot(mod$mod.list[[2]])
 plot(mod$mod.list[[3]])
+plot(mod$mod.list[[4]])
+plot(mod$mod.list[[5]])
 
 hist(mod$dat$trunc.error)
 

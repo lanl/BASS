@@ -8,15 +8,21 @@ sobolOB(mod, int.order, prior = NULL, mcmc.use = 1, nind = NULL,
   ncores = 1, preschedule = F, plot = F)
 }
 \arguments{
+\item{mod}{output from the \code{bassOB} or \code{bassPCA} function.}
+
+\item{int.order}{an integer indicating the highest order of interactions to include in the Sobol decomposition.}
+
+\item{prior}{a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  If unspecified, a uniform is assumed with the same bounds as are represented in the input to xx.}
+
 \item{mcmc.use}{an integer vector indexing which MCMC iterations to use for sensitivity analysis.}
 
-\item{bassMod}{a fitted model output from the \code{bass} function.}
+\item{nind}{number of Sobol indices to keep (will keep the largest nind).}
 
-\item{func.var}{an integer indicating which functional variable to make sensitivity indices a function of.  Disregard if \code{bassMod} is non-functional or if scalar sensitivity indices are desired.}
+\item{ncores}{number of cores to use (nearly linear speedup for adding cores).}
 
-\item{xx.func.var}{grid for functional variable specified by \code{func.var}.  Disregard if \code{func.var} is not specified.  If \code{func.var} is specified and \code{xx.func.var} not specified, the grid used to fit \code{bass} will be used.}
+\item{preschedule}{to be passed to mclapply.}
 
-\item{verbose}{logical; should progress be displayed?}
+\item{plot}{logical; whether to plot results.}
 }
 \value{
 If non-functional (\code{func.var = NULL}), a list with two elements:
@@ -26,7 +32,6 @@ If non-functional (\code{func.var = NULL}), a list with two elements:
  \item{S}{an array with first dimension corresponding to MCMC samples (same length as \code{mcmc.use}), second dimension corresponding to different main effects and interactions (labeled in \code{names.ind}), and third dimension corresponding to the grid used for the functional variable.  The elements of the array are sensitivity indices.}
  \item{S.var}{same as \code{S}, but scaled in terms of total variance rather than percent of variance.}
  \item{names.ind}{a vector of names of the main effects and interactions used.}
- \item{xx}{the grid used for the functional variable.}
 }
 \description{
 Decomposes the variance of the BASS model into variance due to main effects, two way interactions, and so on, similar to the ANOVA decomposition for linear models.  Uses the Sobol' decomposition, which can be done analytically for MARS models.
@@ -36,7 +41,6 @@ Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (ea
 }
 \examples{
 # See examples in bass documentation.
-
 }
 \seealso{
 \link{bass} for model fitting and \link{predict.bass} for prediction.

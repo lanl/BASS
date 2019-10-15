@@ -1,16 +1,31 @@
 ---
+title: "BASS"
 output: github_document
+bibliography: README-bib.bib
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-<!--
+
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "README-"
 )
+library(BASS)
 ```
--->
 
-BASS fits Bayesian Adaptive Spline Surfaces (similar to Bayesian Multivariate Adaptive Regression Splines, or BMARS).
+
+
+BASS is an R package for fitting Bayesian Adaptive Spline Surface models [available on CRAN](https://CRAN.R-project.org/package=BASS) with a development version [available on GitHub](https://github.com/lanl/BASS).
+
+To install the development version, use
+
+```{r, eval = F}
+# install.packages("devtools")
+devtools::install_github("lanl/BASS")
+```
+
+Examples of uses are in @francom2018sensitivity and @francom2019inferring and explicit code examples are given in the R package vignette
+
+# References

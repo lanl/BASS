@@ -45,28 +45,28 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
   }
 
   pdescat<-sum(bassMod$pdes)+sum(bassMod$pcat) # sums make NULLs 0s
-  
+
   if(is.null(prior))
     prior<-list()
-  
+
   if(length(prior)<pdescat){
     for(i in (length(prior)+1):pdescat)
       prior[[i]]<-list(dist=NA)
   }
-  
+
   #browser()
   for(i in 1:pdescat){
     if(is.null(prior[[i]]))
       prior[[i]]<-list(dist=NA)
-    
+
     if(is.na(prior[[i]]$dist)){
       prior[[i]]<-list()
       prior[[i]]$dist<-'uniform'
       #prior[[i]]$trunc<-bassMod$range.des[,i] - not right index when there are categorical vars
     }
   }
-  
-  
+
+
   if(bassMod$func){
     if(is.null(prior.func)){
       prior.func<-list()
@@ -79,7 +79,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
     for(i in 1:length(prior.func))
       class(prior.func[[i]])<-prior.func[[i]]$dist
   }
-    
+
   for(i in 1:length(prior))
     class(prior[[i]])<-prior[[i]]$dist # class will be used for integral functions, should be uniform, normal, or student
 
@@ -94,19 +94,19 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
   } else{
     prior.cat<-NULL
   }
-  
+
   #browser()
   if(bassMod$des){
     for(i in 1:length(prior)){
       if(is.null(prior[[i]]$trunc)){
         prior[[i]]$trunc<-bassMod$range.des[,i]#c(0,1)
-      } 
-      
+      }
+
       prior[[i]]$trunc<-scale.range(prior[[i]]$trunc,bassMod$range.des[,i])
       if(prior[[i]]$trunc[1]<0 | prior[[i]]$trunc[2]>1)
         stop('truncation range larger than training range...it is unwise to ask an emulator to extrapolate.')
       #browser()
-      
+
       if(prior[[i]]$dist %in% c('normal','student')){
         prior[[i]]$mean<-scale.range(prior[[i]]$mean,bassMod$range.des[,i])
         prior[[i]]$sd<-prior[[i]]$sd/(bassMod$range.des[2,i]-bassMod$range.des[1,i])
@@ -122,9 +122,34 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
       }
     }
   }
-  
-  
-  
+
+  if(bassMod$func){
+    for(i in 1:length(prior.func)){
+      if(is.null(prior.func[[i]]$trunc)){
+        prior.func[[i]]$trunc<-bassMod$range.func[,i]#c(0,1)
+      }
+
+      prior.func[[i]]$trunc<-scale.range(prior.func[[i]]$trunc,bassMod$range.func[,i])
+      if(prior.func[[i]]$trunc[1]<0 | prior.func[[i]]$trunc[2]>1)
+        stop('truncation range of functional variable larger than training range...it is unwise to ask an emulator to extrapolate.')
+      #browser()
+
+      if(prior.func[[i]]$dist %in% c('normal','student')){
+        prior.func[[i]]$mean<-scale.range(prior.func[[i]]$mean,bassMod$range.func[,i])
+        prior.func[[i]]$sd<-prior.func[[i]]$sd/(bassMod$range.func[2,i]-bassMod$range.func[1,i])
+        if(prior.func[[i]]$dist == 'normal'){
+          prior.func[[i]]$z<-pnorm((prior.func[[i]]$trunc[2]-prior.func[[i]]$mean)/prior.func[[i]]$sd) - pnorm((prior.func[[i]]$trunc[1]-prior.func[[i]]$mean)/prior.func[[i]]$sd)
+        } else{
+          prior.func[[i]]$z<-pt((prior.func[[i]]$trunc[2]-prior.func[[i]]$mean)/prior.func[[i]]$sd,prior.func[[i]]$df) - pt((prior.func[[i]]$trunc[1]-prior.func[[i]]$mean)/prior.func[[i]]$sd,prior.func[[i]]$df)
+        }
+        cc<-sum(prior.func[[i]]$weights*prior.func[[i]]$z)
+        prior.func[[i]]$weights<-prior.func[[i]]$weights/cc#prior[[i]]$z # change weights with truncation # divide by cc instead to keep the same prior shape
+        # does the truncation change the distribution shape in the non-truncated regions??
+        #browser()
+      }
+    }
+  }
+
   # if(bassMod$func){
   #   for(i in 1:length(prior.func)){
   #     if(is.null(prior.func[[i]]$trunc)){
@@ -132,7 +157,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
   #     } else{
   #       prior.func[[i]]$trunc<-scale.range(prior.func[[i]]$trunc,bassMod$range.func[,i])
   #     }
-  #     
+  #
   #     if(prior.func[[i]]$dist %in% c('normal','student')){
   #       prior.func[[i]]$mean<-scale.range(prior.func[[i]]$mean,bassMod$range.func[,i])
   #       prior.func[[i]]$sd<-prior.func[[i]]$sd/(bassMod$range.func[2,i]-bassMod$range.func[1,i])
@@ -145,17 +170,17 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
   #     }
   #   }
   # }
-  # 
-  # 
+  #
+  #
   # prior.func[[func.var]]<-NULL
   # prior<-c(prior,prior.func)
   # check to see if this worked how we expected, pass prior and prior.cat around
-  
-  
-  
-  
+
+
+  prior<-c(prior,prior.func)
+
   #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
+
   if(is.null(func.var)){
     func<-F
   } else{
@@ -168,7 +193,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
 
   if(!is.null(xx.func.var) & !func)
     warning('disregarding xx.func.var because bassMod parameter is not functional')
-  
+
   if(func){
     if(!(func.var%in%(1:ncol(bassMod$xx.func))))
       stop('func.var in wrong range of values')
@@ -206,7 +231,7 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   p<-pdes+pcat+pfunc
 
   #prior<-c(prior,prior.func)
-  
+
   ################################################
   # get combs including functional variables
   #browser()
@@ -240,8 +265,8 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
       lens<-apply(tl$Kind,1,function(x) length(na.omit(x))) # number of interactions in each basis function
 
       var.tot<-Vu(1:p,tl) # total variance, one for each mcmc iteration (since coefs change each mcmc iteration rather than each model)
-      
-     
+
+
       # vt<-myCC<-myC2<-matrix(nrow=M,ncol=M)
       # for(i in 1:M){
       #   for(j in 1:M){
@@ -264,22 +289,22 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
       #     vt[i,j]=prod2-prod1#prod1*(prod2/prod1-1)
       #   }
       # }
-      # 
+      #
       # u=1:p
       # CCu<-apply(tl$C1.all.prod3[,,u,drop=F],1:2,prod) # product over u's TODO: utilize symmetry
       # C2.temp<-apply(tl$C2.all2[,,u,drop=F],1:2,prod)
       # mat<-tl$CC*(C2.temp/CCu-1)
       # mat[tl$CC==0]<-0
-      # 
+      #
       # C2.temp[CCu==0]
       # CCu[C2.temp==0]
-      # 
+      #
       # CCu[1,4]
       # myCC[1,4]
       # tl$CC[1,4]
       # C2.temp[1,4]
       # myC2[1,4]
-      # 
+      #
       # VuMat(1:p,tl)[4,1]
       # vt[4,1]
       # range(VuMat(1:p,tl)-vt)
@@ -287,19 +312,19 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
       # (tl$a%*%mat%*%t(tl$a))
       # var.tot
       # browser()
-      
+
       vars.used<-unique(unlist(na.omit(c(tl$Kind)))) # which variables are used in this model?
       vars.used<-sort(vars.used)
 
       tl$integrals<-matrix(0,nrow=length(mcmc.use.mod),ncol=max(cs.num.ind)) # where we store all the integrals (not normalized by subtraction) - matches dim of sob
-      
+
       ## get main effect variances
-      
+
       tl$integrals[,which(combs[[1]]%in%vars.used)]<-apply(t(vars.used),2,Vu,tl=tl) # one for each effect for each mcmc iteration, only done for the used vars, but inserted into the correct column of tl$integrals
       sob[mod.ind,1:cs.num.ind[1]]<-tl$integrals[,1:cs.num.ind[1]] # main effects are done
 
       ## get interactions
-      
+
       # consider changing lens to n.int
       if(max(lens)>1){ # if there are any interactions
         for(l in 2:max(lens)){ # must go in order for it to work (tl$integrals is made sequentially)
@@ -336,14 +361,14 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   sob<-as.data.frame(sob)
   names(sob)<-unlist(names.ind) # give labels
 
-  
+
   if(verbose)
     cat('Total Sensitivity',myTimestamp(),'\n')
 
   tot<-getTot(combs,sob,names.ind) # get total indices
-  
+
   ## reorder socolumns of sob & tot matrices to match original data order
-  
+
   sob.reorder<-NA
   sob.reorder[1:length(names.ind[[1]])]<-mixOrd(allCombs$dispNames[[1]])
   if(length(names.ind)>1){
@@ -355,13 +380,13 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   names(sob)<-unlist(allCombs$dispNames)[sob.reorder]
   tot<-tot[,sob.reorder[1:length(names.ind[[1]])],drop=F]
   names(tot)<-allCombs$dispNames[[1]][sob.reorder[1:length(names.ind[[1]])]]
-  
+
   if(any(sob<0))
     browser()
-  
+
   ret<-list(S=sob,T=tot,func=F,var.tot=var.tot.store,f0=f0.store,ints=tl$integrals,prior=prior)
   class(ret)<-'bassSob'
-  
+
   return(ret)
 }
 
@@ -383,7 +408,7 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
   pcat<-sum(bassMod$pcat)
   pfunc<-sum(bassMod$pfunc)
   p<-pdes+pcat+pfunc
-  
+
   ################################################
   # get combs including functional variables
   allCombs<-getCombs(bassMod,uniq.models,nmodels,maxBasis,maxInt.tot,func.var)
@@ -396,7 +421,7 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
 
   #prior.func[[func.var]]<-NULL
   #prior<-c(prior,prior.func)
-  
+
   if(verbose)
     cat('Sobol Start',myTimestamp(),'Models:',length(unique(models)),'\n')
 
@@ -421,24 +446,24 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
       var.tot<-Vu_des_func(1:p,tl) # total variance
       vars.used<-unique(unlist(na.omit(c(tl$Kind)))) # which variables are used?
       vars.used<-sort(vars.used)
-      
+
       tl$integrals<-array(0,dim=c(length(mcmc.use.mod),max(cs.num.ind),length(xx.func.var))) # where we store all the integrals (not normalized by subtraction)
       jj=0
       for(pp in vars.used){
         #jj=jj+1
         tl$integrals[,which(combs[[1]]==pp),]<-Vu_des_func(pp,tl)
       }
-      
-      
-      
+
+
+
       sob[mod.ind,1:cs.num.ind[1],]<-tl$integrals[,1:cs.num.ind[1],]
-      
+
       if(max(lens)>1){ # if there are any interactions
         for(l in 2:max(lens)){ # must go in order for it to work (tl$integrals is made sequentially)
           int.l.ind<-(cs.num.ind[l-1]+1):cs.num.ind[l]
           #basis.int.l.use<-matrix(nrow=M,ncol=length(combs.list[[l]]))
           basis.int.l.use<-matrix(nrow=M,ncol=num.ind[l])
-          
+
           for(m in 1:M){
             #basis.int.l.use[m,]<-unlist(lapply(combs.list[[l]],function(el){prod(el%in%tl$Kind[m,])})) # all the variables in question must be in the basis
             basis.int.l.use[m,]<-apply(combs[[l]],2,function(el){prod(el%in%tl$Kind[m,])})
@@ -447,7 +472,7 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
           for(pp in which(use)){
             tl$integrals[,int.l.ind[pp],]<-Vu_des_func(combs[[l]][,pp,drop=F],tl) # perform the necessary integration
           }
-          
+
           sob.l<-array(0,dim=c(length(mcmc.use.mod),num.ind[l],length(xx.func.var)))
           for(l2 in (1:num.ind[l])[use]){ # only go through the interactions that are actually in Kind (but still allow for 2-way when actual is 3-way, etc.)
             sob.l[,l2,]<-VuInt_des_func(combs[[l]][,l2],tl) # do the normalizing
@@ -455,22 +480,22 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
           sob[mod.ind,int.l.ind,]<-sob.l
         }
       }
-      
+
       kk<-0
       for(ii in mod.ind){
         kk=kk+1
         sob2[ii,,]<-t(t(sob[ii,,])/var.tot[kk,]) # sobol indices
       }
       i<-i+length(mcmc.use.mod) # for index
-      
+
       if(verbose & mod.count%%10==0)
         cat('Sobol',myTimestamp(),'Model:',mod.count,'\n')
     }
   }
-  
-  
-  
-  
+
+
+
+
   # reorder for display
   sob.reorder<-NA
   sob.reorder[1:length(names.ind[[1]])]<-mixOrd(allCombs$dispNames[[1]])
@@ -481,18 +506,18 @@ sobol_des_func<-function(bassMod,mcmc.use,verbose,func.var,xx.func.var,prior,pri
   }
   sob<-sob[,sob.reorder,,drop=F]
   sob2<-sob2[,sob.reorder,,drop=F]
-  
+
 
   #if(any(sob2<0))
   #  browser()
-  
+
   ret<-list(S=sob2,S.var=sob,names.ind=unlist(allCombs$dispNames)[sob.reorder],xx=unscale.range(tl$xx,bassMod$range.func),func=T,prior=prior)
   class(ret)<-'bassSob'
   return(ret)
 }
 
 # get total sensitivity indices
-getTot<-function(combs,sob,names.ind){ 
+getTot<-function(combs,sob,names.ind){
   vars.use<-unique(unlist(combs))
   puse<-length(vars.use)
   ncombs<-sapply(combs,ncol)
@@ -522,7 +547,7 @@ getTot<-function(combs,sob,names.ind){
 ########################################################################
 
 ## make for only one variable
-makeBasisMatrixVar<-function(i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train,var){ 
+makeBasisMatrixVar<-function(i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train,var){
   n<-ncol(xxt)
   tbasis.mat<-matrix(nrow=nbasis+1,ncol=n)
   tbasis.mat[1,]<-1
@@ -577,7 +602,7 @@ getCombs<-function(bassMod,uniq.models,nmodels,maxBasis,maxInt.tot,func.var=NULL
   for(ii in 1:maxInt.tot)
     int.begin.ind[ii]<-which(sapply(n.un,length)==ii)[1]
   int.begin.ind[maxInt.tot+1]<-length(n.un)+1 # need the top level to help with indexing later
-  
+
   combs<-names.ind<-dispNames<-dispCombs<-mat<-list()
   ints.used<-(1:maxInt.tot)[!is.na(int.begin.ind[-(maxInt.tot+1)])] # which interactions we actually use in the models
   int.begin.ind<-na.omit(int.begin.ind) # will help index things
@@ -612,7 +637,7 @@ get_tl<-function(bassMod,mcmc.use.mod,M,mod,p,q,cs.num.ind,combs,func.var=NULL,x
     vf[vf==func.var]<-NA # if there is a functional variable specified, we make it NA so that we don't integrate over it
     pfunc<-pfunc-1 # disregarding the func.var so we don't integrate over it
   }
-  
+
   if(bassMod$des){
     Kind<-cbind(bassMod$vars.des[mod,1:M,],vf+bassMod$pdes) # Kind[i,] is the variables used in the ith basis function, including relevant functional ones
   } else if(bassMod$func){
@@ -620,7 +645,7 @@ get_tl<-function(bassMod,mcmc.use.mod,M,mod,p,q,cs.num.ind,combs,func.var=NULL,x
   } else{
     Kind<-NA
   }
-  
+
   if(M==1){
     Kind<-t(Kind)
   }
@@ -695,25 +720,25 @@ add_tl<-function(tl,p){
       C1.all<-cbind(C1.all,C1.all.cat)
     }
   }
-  
+
   #C1.all.temp<-replace(C1.all,which(C1.all==0,arr.ind=T),1) # for products, make 0's into 1's, see Eq 50 of Chen 2004 to understand why (if we didn't the products wouldn't work)
   C1.all.temp<-C1.all
   C1.all.prod<-apply(C1.all.temp,1,prod) # product over basis functions (from 1 to M)
   tl$CC<-tcrossprod(C1.all.prod) # Eq 35, this is the product from 1:p (M in their notation) for all combinations of basis functions
   C2.all<-C1.all.prod2<-both.ind<-array(0,dim=c(tl$M,tl$M,p.use))
-  
+
   for(ii in 1:tl$M){
     for(jj in ii:tl$M){
       bb<-intersect(na.omit(tl$Kind[ii,]),na.omit(tl$Kind[jj,])) # variables that basis functions ii and jj have in common
-      
-      
-      
+
+
+
       ## test
-      C1.all.prod2[ii,jj,]<-C1.all.prod2[jj,ii,]<-C1.all.temp[ii,]*C1.all.temp[jj,] 
+      C1.all.prod2[ii,jj,]<-C1.all.prod2[jj,ii,]<-C1.all.temp[ii,]*C1.all.temp[jj,]
       ##
-      
-      
-      
+
+
+
       #if(length(bb)>0){
         #C1.all.prod2[ii,jj,]<-C1.all.prod2[jj,ii,]<-C1.all[ii,]*C1.all[jj,] # pairwise products of C1.all, without final product like tl$CC.  Nothing is ever multiplied by 0 because of if statement above
         #if(ii==11 & jj==11)
@@ -721,9 +746,9 @@ add_tl<-function(tl,p){
         #both.ind[ii,jj,bb]<-both.ind[jj,ii,bb]<-1
         #bb.cat<-bb[bb>p.df]
         #bb.des<-bb[bb<=p.df]
-      
+
       #browser()
-      
+
         temp<-rep(0,p.use)
         #if(length(bb.des)>0){
         if(p.df>0)
@@ -742,7 +767,7 @@ add_tl<-function(tl,p){
   tl$C2.all2<-C2.all
   #tl$C2.all2[!as.logical(both.ind)]<-1
   #tl$C2.all2[tl$C2.all2==0]<-1
-  
+
   #browser()
   #if(min(tl$C2.all2)<1e-13)
   #  browser()
@@ -805,7 +830,7 @@ intabq1.normal<-function(prior,a,b,t,q){
   for(k in 1:length(prior$weights)){
     zk<-pnorm(b,prior$mean[k],prior$sd[k]) - pnorm(a,prior$mean[k],prior$sd[k])
     #tnorm.mean.zk<-prior$mean[k]*zk - prior$sd[k]*(dnorm(b,prior$mean[k],prior$sd[k]) - dnorm(a,prior$mean[k],prior$sd[k]))
-    
+
     ast<-(a-prior$mean[k])/prior$sd[k]
     bst<-(b-prior$mean[k])/prior$sd[k]
     dnb<-dnorm(bst)
@@ -877,7 +902,7 @@ C1<-function(k,m,tl,tq=F){ #k is variable, m is basis function # deals with sign
 
 
 ## refer to francom 2016 paper
-pCoef<-function(i,q){ 
+pCoef<-function(i,q){
   factorial(q)^2*(-1)^i/(factorial(q-i)*factorial(q+1+i))
 }
 ## integral from a to b of [(x-t1)(x-t2)]^q * prior(x) when q positive integer
@@ -931,7 +956,7 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
   # if((s1*s2)==0){
   #   return(0)
   # }
-  
+
   ## test
   if(s1==0 & s2==0){
     #browser()
@@ -944,14 +969,14 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
     return(C1(k,n,tl))
   }
   ##
-  
+
   if(t2<t1){
     t1<-tl$t[m,k]
     s1<-tl$s[m,k]
     t2<-tl$t[n,k]
     s2<-tl$s[n,k]
   }
-  
+
   #cc1<-const(signs=s1,knots=t1,degree=q)
   #cc2<-const(signs=s2,knots=t2,degree=q)
   #int<-integrate(function(x) pos(s1*(x-t1))/cc1*pos(s2*(x-t2))/cc2*dunif(x,tl$prior[[k]]$trunc[1],tl$prior[[k]]$trunc[2]),lower=0,upper=1,stop.on.error = F)$value
@@ -961,7 +986,7 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
     #return(1/(2*q+1)*((s1+1)/2-s1*t1)^(2*q+1)/cc)
    # browser()
   #  return(C1(k,m,tl,tq=T)) # this is the same as if you let it run below, maybe faster?
-    
+
   #} #else{
     if(s1==1){
       if(s2==1){
@@ -992,7 +1017,7 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
       }
     }
   #}
-  
+
   if(abs(out)<.Machine$double.eps)
     out<-0
   if(out<0)
@@ -1006,7 +1031,7 @@ C2Cat<-function(k,m,n,tl){ # k is variable (categorical), m & n are basis functi
 }
 
 ## matrix used in sobol main effect variances - where most of the time is spent
-VuMat<-function(u,tl){ 
+VuMat<-function(u,tl){
   #browser()
   CCu<-apply(tl$C1.all.prod3[,,u,drop=F],1:2,prod) # product over u's TODO: utilize symmetry
   C2.temp<-apply(tl$C2.all2[,,u,drop=F],1:2,prod)
@@ -1025,7 +1050,7 @@ Vu<-function(u,tl){
 }
 
 ## functional sobol main effect variances
-Vu_des_func<-function(u,tl){ 
+Vu_des_func<-function(u,tl){
   mat<-VuMat(u,tl)
   nx<-length(tl$xx)
   nmodels<-length(tl$a[,1])
@@ -1042,7 +1067,7 @@ Vu_des_func<-function(u,tl){
 }
 
 ## sobol interaction variances
-VuInt<-function(u,tl){ 
+VuInt<-function(u,tl){
   add<-0
   len<-length(u)
   for(l in 1:len){
@@ -1061,7 +1086,7 @@ VuInt_des_func<-function(u,tl){
   len<-length(u)
   #browser()
   for(l in 1:len){
-    ind<-((sum(tl$cs.num.ind[l-1])+1):tl$cs.num.ind[l])[apply(tl$combs[[l]],2,function(x) all(x%in%u))] # this gets index for which combs are subsets of u, sum() makes it 0 when it should be 
+    ind<-((sum(tl$cs.num.ind[l-1])+1):tl$cs.num.ind[l])[apply(tl$combs[[l]],2,function(x) all(x%in%u))] # this gets index for which combs are subsets of u, sum() makes it 0 when it should be
     add<-add+(-1)^(len-l)*apply(tl$integrals[,ind,,drop=F],c(1,3),sum)
   }
   add[abs(add)<1e-13]<-0

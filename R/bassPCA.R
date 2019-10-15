@@ -13,7 +13,7 @@
 #' @param optionally specify percent of variance to explain instead of n.pc
 #' @param n.cores integer number of cores to use (non Windows machines)
 #' @param ... areguements to be passed to bass.
-#' @details Fits a bass model to each basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.  
+#' @details Fits a bass model to each basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.
 #' @return An object of class 'bassOB' with two elements:
 #'   \item{mod.list}{list of individual bass models}
 #'   \item{dat}{same as dat above}
@@ -23,15 +23,16 @@
 #' @useDynLib BASS, .registration = TRUE
 #' @import stats
 #' @import utils
-#' 
+#' @example inst/examplesPCA.R
+#'
 bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,center=T,scale=F,...){
   if(is.null(dat))
     dat<-bassPCAsetup(xx,y,n.pc,perc.var,center,scale)
-  
+
   require(parallel)
   n.cores<-min(n.cores,dat$n.pc,detectCores())
   mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule=F)
-  
+
   ret<-list(mod.list=mod.list,dat=dat)
   class(ret)<-'bassOB'
   return(ret)
@@ -41,9 +42,9 @@ bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,center
 
 
 # Sys.info()["sysname"]
-# #  sysname 
+# #  sysname
 # #"Windows"
-# 
+#
 # library(parallel)
 # cl <- makeCluster(getOption("cl.cores", 2))
 # l <- list(1, 2)
@@ -52,9 +53,9 @@ bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,center
 #     Sys.sleep(10)
 #   })
 # )
-# #user  system elapsed 
-# #0       0      10 
-# 
+# #user  system elapsed
+# #0       0      10
+#
 # stopCluster(cl)
 
 
@@ -66,21 +67,21 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
   n<-nrow(xx)
   y<-as.matrix(y)
   xx<-as.data.frame(xx)
-  
+
   if(nrow(y)==1 | ncol(y)==1)
     stop('Non-function y: use bass instead of bassPCA')
-  
+
   if(ncol(y)!=nrow(xx))
     y<-t(y)
   if(ncol(y)!=nrow(xx))
     stop('x,y dimension mismatch')
-  
+
   if(!is.null(n.pc)){
     if(n.pc>nrow(y))
       warning('n.pc too large, using all PCs intead')
   }
-  
-  
+
+
   y.m<-rowMeans(y)
   if(!center)
     y.m<-0
@@ -89,17 +90,17 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
     y.s<-1
   yc<-(y-y.m)/y.s
   S<-svd(yc)
-  
+
   if(is.null(n.pc)){
     ev<-S$d^2
     n.pc<-which(cumsum(ev/sum(ev))*100>perc.var)[1]
   }
-  
+
   basis<-S$u[,1:n.pc]%*%diag(S$d[1:n.pc]) # columns are basis functions
   newy<-t(S$v[,1:n.pc])
-  
+
   trunc.error<-basis%*%newy - yc
-  
+
   ret<-list(xx=xx,y=y,n.pc=n.pc,basis=basis,newy=newy,trunc.error=trunc.error,y.m=y.m,y.s=y.s)
   class(ret)<-'bassPCAsetup'
   return(ret)
@@ -125,7 +126,7 @@ bassOB<-function(dat,n.cores=1,...){
 
   require(parallel)
   mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule=F)
-  
+
   ret<-list(mod.list=mod.list,dat=dat)
   class(ret)<-'bassOB'
   return(ret)
@@ -167,11 +168,11 @@ bassOB<-function(dat,n.cores=1,...){
 predict.bassOB<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
   require(parallel)
   newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
-  
+
   out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(newy.pred[i,,],object$dat),mc.cores=min(n.cores,length(mcmc.use)))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
-  
+
   out<-aperm(out,c(3,2,1))
-  
+
   return(out) # should be nmcmc x npred x nfunc
 }
 
@@ -190,11 +191,11 @@ predict1mod<-function(mod,newdata,mcmc.use,...){
 predict_fast.bassOB<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
   require(parallel)
   newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod_fast(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
-  
+
   out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(newy.pred[i,,],object$dat),mc.cores=min(n.cores,length(mcmc.use)))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
-  
+
   out<-aperm(out,c(3,2,1))
-  
+
   return(out) # should be nmcmc x npred x nfunc
 }
 
@@ -252,34 +253,34 @@ predict1mod_fast<-function(mod,newdata,mcmc.use,...){
 #' # See examples in bass documentation.
 
 sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,preschedule=F,plot=F){
-  
-  
-  
-  
+
+
+
+
   bassMod<-mod$mod.list[[1]] # for structuring everything, assuming that model structures are the same for different PCs
   pdescat<-sum(bassMod$pdes)+sum(bassMod$pcat) # sums make NULLs 0s
-  
+
   if(is.null(prior))
     prior<-list()
-  
+
   if(length(prior)<pdescat){
     for(i in (length(prior)+1):pdescat)
       prior[[i]]<-list(dist=NA)
   }
-  
+
   #browser()
   for(i in 1:pdescat){
     if(is.null(prior[[i]]))
       prior[[i]]<-list(dist=NA)
-    
+
     if(is.na(prior[[i]]$dist)){
       prior[[i]]<-list()
       prior[[i]]$dist<-'uniform'
       #prior[[i]]$trunc<-bassMod$range.des[,i] - not right index when there are categorical vars
     }
   }
-  
-  
+
+
   if(bassMod$func){
     if(is.null(prior.func)){
       prior.func<-list()
@@ -292,11 +293,11 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
     for(i in 1:length(prior.func))
       class(prior.func[[i]])<-prior.func[[i]]$dist
   }
-  
+
   for(i in 1:length(prior))
     class(prior[[i]])<-prior[[i]]$dist # class will be used for integral functions, should be uniform, normal, or student
-  
-  
+
+
   if(bassMod$cat){
     which.cat<-which(bassMod$cx=='factor')
     prior.cat<-list()
@@ -307,7 +308,7 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   } else{
     prior.cat<-NULL
   }
-  
+
   #browser()
   if(bassMod$des){
     for(i in 1:length(prior)){
@@ -316,7 +317,7 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
       } else{
         prior[[i]]$trunc<-scale.range(prior[[i]]$trunc,bassMod$range.des[,i])
       }
-      
+
       if(prior[[i]]$dist %in% c('normal','student')){
         prior[[i]]$mean<-scale.range(prior[[i]]$mean,bassMod$range.des[,i])
         prior[[i]]$sd<-prior[[i]]$sd/(bassMod$range.des[2,i]-bassMod$range.des[1,i])
@@ -332,38 +333,38 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
       }
     }
   }
-  
-  
 
-  
-  
+
+
+
+
   #browser()
-  
-  
-  
-  
-  
+
+
+
+
+
   tl<-list(prior=prior)
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   pc.mod<-mod$mod.list
   pcs<-mod$dat$basis
-  
+
   cat('Start',timestamp(quiet = T),'\n')
   p<-pc.mod[[1]]$p
   u.list<-lapply(1:int.order,function(i) combn(1:p,i))
@@ -372,14 +373,14 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   nxfunc<-nrow(pcs)
   #sob<-matrix(nrow=nxfunc,ncol=ncombs)
   sob<-ints<-list()
-  
+
   n.pc<-ncol(pcs)
   w0<-unlist(lapply(1:n.pc,function(pc) get.f0(prior,pc.mod,pc,mcmc.use)))
-  
+
   #browser()
-  
+
   f0r2<-(pcs%*%w0)^2
-  
+
   max.nbasis<-max(unlist(lapply(pc.mod,function(x) x$nbasis[mcmc.use])))
   C1OB.array<-array(dim=c(n.pc,p,max.nbasis))
   for(i in 1:n.pc){
@@ -392,9 +393,9 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
     }
     #print(i)
   }
-  
+
   # browser()
-  # 
+  #
   # C2OB.array<-array(dim=c(n.pc,n.pc,p,max.nbasis,max.nbasis))
   # for(i1 in 1:n.pc){
   #   nb1<-pc.mod[[i1]]$nbasis[mcmc.use]
@@ -412,8 +413,8 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   #   }
   #   print(i1)
   # }
-  
-  
+
+
   #browser()
   u.list1<-list()
   for(i in 1:int.order)
@@ -421,12 +422,12 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   require(parallel)
   #browser()
   cat('Integrating',timestamp(quiet = T),'\n')
-  
+
   u.list.temp<-c(list(1:p),u.list1)
   ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1OB.array),mc.cores=ncores,mc.preschedule = preschedule)
   V.tot<-ints1.temp[[1]]
   ints1<-ints1.temp[-1]
-  
+
   #ints1<-mclapply(u.list1,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1OB.array),mc.cores=ncores,mc.preschedule = preschedule)
   ints<-list()
   ints[[1]]<-do.call(cbind,ints1[1:ncol(u.list[[1]])])
@@ -434,22 +435,22 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
     for(i in 2:int.order)
       ints[[i]]<-do.call(cbind,ints1[sum(ncombs.vec[1:(i-1)])+1:ncol(u.list[[i]])])
   }
-  
+
   # for(i in 1:length(u.list))
   #   ints[[i]]<-apply(u.list[[i]],2,function(x) func.hat(x,pc.mod,pcs,mcmc.use,f0r2)) # the heavy lifting
-  
-  
+
+
   sob[[1]]<-ints[[1]]
   # matplot(t(apply(sob[[1]],1,cumsum)),type='l')
   # matplot(t(apply(sens.func$S.var[1,1:5,],2,cumsum)),type='l',add=T)
-  
-  #V.tot<-func.hat(prior,1:p,pc.mod,pcs,mcmc.use,f0r2) # need to add this to the above
-  
 
-  
+  #V.tot<-func.hat(prior,1:p,pc.mod,pcs,mcmc.use,f0r2) # need to add this to the above
+
+
+
   # plot(V.tot)
   # points(apply(sens.func$S.var[1,,],2,sum),col=2)
-  
+
   cat('Shuffling',timestamp(quiet = T),'\n')
   if(length(u.list)>1){
     for(i in 2:length(u.list)){
@@ -464,8 +465,8 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
       }
     }
   }
-  
-  
+
+
   # sens.func.use<-lapply(strsplit(sens.func$names.ind,'x'),as.numeric)
   # sl<-sapply(sens.func.use,length)
   # ind.list<-list()
@@ -479,55 +480,55 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   #   }
   #   sob.small[[i]]<-sob[[i]][,ind.list[[i]]]
   # }
-  # 
+  #
   # sob.small<-do.call(cbind,sob.small)
   # matplot(t(apply(sob.small,1,cumsum)),type='l')
   # matplot(t(apply(sens.func$S.var[1,,],2,cumsum)),type='l',add=T)
-  
+
   #browser()
-  
+
   if(is.null(nind))
     nind<-ncombs
-  
-  
+
+
   sob.comb.var<-do.call(cbind,sob)
-  
+
   vv<-colMeans(sob.comb.var)
   ord<-order(vv,decreasing = T)
   cutoff<-vv[ord[nind]]
   if(nind>length(ord))
     cutoff<-min(vv)
   use<-sort(which(vv>=cutoff))
-  
-  
+
+
   V.other<-V.tot-rowSums(sob.comb.var[,use])
   use<-c(use,ncombs+1)
-  
+
   sob.comb.var<-t(cbind(sob.comb.var,V.other))
   sob.comb<-t(t(sob.comb.var)/c(V.tot))
-  
+
   sob.comb.var<-sob.comb.var[use,,drop=F]
   sob.comb<-sob.comb[use,,drop=F]
-  
+
   dim(sob.comb)<-c(1,length(use),nxfunc)
   dim(sob.comb.var)<-c(1,length(use),nxfunc)
-  
-  
+
+
   names.ind<-c(unlist(lapply(u.list,function(x) apply(x,2,paste,collapse='x',sep=''))),'other')
   names.ind<-names.ind[use]
-  
+
   cat('Finish',timestamp(quiet = T),'\n')
-  
+
   #browser()
-  
+
   ret<-list(S=sob.comb,S.var=sob.comb.var,Var.tot=V.tot,names.ind=names.ind,xx=seq(0,1,length.out = nxfunc),func=T)
   class(ret)<-'bassSob'
-  
+
   if(plot)
     plot(ret)
-  
+
   return(ret)
-  
+
 }
 
 ################################################################################
@@ -539,7 +540,7 @@ func.hat<-function(prior,u,pc.mod,pcs,mcmc.use,f0r2,C1OB.array){ # could speed t
   n.pc<-length(pc.mod)
   for(i in 1:n.pc){
     res<-res+pcs[,i]^2*Ccross(prior,pc.mod,i,i,u,mcmc.use,C1OB.array)
-    
+
     if(i<n.pc){
       for(j in (i+1):n.pc){
         res<-res+2*pcs[,i]*pcs[,j]*Ccross(prior,pc.mod,i,j,u,mcmc.use,C1OB.array)
@@ -554,25 +555,25 @@ Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1OB.array){ # inner product of m
   p<-pc.mod[[1]]$p
   mcmc.mod.usei<-pc.mod[[i]]$model.lookup[mcmc.use]
   mcmc.mod.usej<-pc.mod[[j]]$model.lookup[mcmc.use]
-  
+
   Mi<-pc.mod[[i]]$nbasis[mcmc.use]
   Mj<-pc.mod[[j]]$nbasis[mcmc.use]
   mat<-matrix(nrow=Mi,ncol=Mj)
-  
+
   #CC<-C2OB.temp<-CCu<-matrix(1,nrow=Mi,ncol=Mj)
-  
+
   a0i<-pc.mod[[i]]$beta[mcmc.use,1]
   a0j<-pc.mod[[j]]$beta[mcmc.use,1]
   f0i<-get.f0(prior,pc.mod,i,mcmc.use)
   f0j<-get.f0(prior,pc.mod,j,mcmc.use)
-  
+
   out<- a0i*a0j + a0i*(f0j-a0j) + a0j*(f0i-a0i)
   #browser()
-  
+
   if(Mi>0 & Mj>0){
     ai<-pc.mod[[i]]$beta[mcmc.use,1+1:Mi]
     aj<-pc.mod[[j]]$beta[mcmc.use,1+1:Mj]
-    
+
     for(mi in 1:Mi){
       for(mj in 1:Mj){
         temp1<-ai[mi]*aj[mj]
@@ -611,8 +612,8 @@ C1OB<-function(prior,pc.mod,l,m,pc,mcmc.mod.use){ # l = variable, m = basis func
     t.ind<-pc.mod[[pc]]$knotInd.des[mcmc.mod.use,m,int.use.l]
     t<-pc.mod[[pc]]$xx.des[t.ind,l]
     q<-pc.mod[[pc]]$degree
-    #return((1/(q+1)*((s+1)/2-s*t))*s^2) 
-    
+    #return((1/(q+1)*((s+1)/2-s*t))*s^2)
+
     if(s==0)
       return(0)
     cc<-const(signs=s,knots=t,degree=q)
@@ -634,8 +635,8 @@ C1OB<-function(prior,pc.mod,l,m,pc,mcmc.mod.use){ # l = variable, m = basis func
     if(out< -1e-15)
       browser()
     return(out)
-    
-    
+
+
   } else{
     l.cat<-l-pc.mod[[pc]]$pdes # assumes that des vars come before cat vars, which I think we do internally.
     int.use.l<-which(pc.mod[[pc]]$vars.cat[mcmc.mod.use,m,]==l.cat)
@@ -662,10 +663,10 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
       return(C1OB(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
     if(length(int.use.l2)==0)
       return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
-    
+
     #if(pc1==pc2 & m1==m2)
     #  return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1)^2) ## is this right??
-    
+
     q<-pc.mod[[pc1]]$degree
     s1<-pc.mod[[pc1]]$signs[mcmc.mod.use1,m1,int.use.l1]
     s2<-pc.mod[[pc2]]$signs[mcmc.mod.use2,m2,int.use.l2]
@@ -673,9 +674,9 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
     t.ind2<-pc.mod[[pc2]]$knotInd.des[mcmc.mod.use2,m2,int.use.l2]
     t1<-pc.mod[[pc1]]$xx.des[t.ind1,l]
     t2<-pc.mod[[pc2]]$xx.des[t.ind2,l]
-    
 
-    
+
+
     if(t2<t1){
       temp<-t1
       t1<-t2
@@ -688,17 +689,17 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
     return(C22OB(prior[[l]],t1,t2,s1,s2,q,m1,m2,pc1,pc2))
   } else{
     l.cat<-l-pc.mod[[pc1]]$pdes
-    
+
     int.use.l1<-which(pc.mod[[pc1]]$vars.cat[mcmc.mod.use1,m1,]==l.cat)
     int.use.l2<-which(pc.mod[[pc2]]$vars.cat[mcmc.mod.use2,m2,]==l.cat)
-    
+
     if(length(int.use.l1)==0 & length(int.use.l2)==0)
       return(1)
     if(length(int.use.l1)==0)
       return(C1OB(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
     if(length(int.use.l2)==0)
       return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
-    
+
     #browser()
     sub1<-pc.mod[[pc1]]$sub.list[[mcmc.mod.use1]][[m1]][[int.use.l1]]
     sub2<-pc.mod[[pc2]]$sub.list[[mcmc.mod.use2]][[m2]][[int.use.l2]]
@@ -719,9 +720,9 @@ C22OB<-function(prior,t1,t2,s1,s2,q,m1,m2,pc1,pc2){ # t1<t2
   #   return(1/(2*q+1)*((s1+1)/2-s1*t1)^(2*q+1)/cc)
   #   intabq1(prior[[l]],a,b,t,q)/cc
   #   if(s1==1){
-  #     
+  #
   #   } else{
-  #     
+  #
   #   }
   # } else{
     if(s1==1){
@@ -765,28 +766,28 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
 
 ##################################################################################################################################################################
 ##################################################################################################################################################################
-## modularized calibration 
+## modularized calibration
 
 calibrate.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
   p<-ncol(mod$dat$xx)
   ny<-length(y)
   ns<-mod$mod.list[[1]]$nmcmc-mod$mod.list[[1]]$nburn # number of emu mcmc samples
-  
+
   theta<-matrix(nrow=nmcmc,ncol=p)
   s2<-rep(NA,nmcmc)
-  
+
 #browser()
   theta[1,]<-.5
   pred.curr<-predict(mod,theta[1,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
   s2[1]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
-  
+
   eps<-1e-10
   cc<-2.4^2/p
   S<-diag(p)*eps
   count<-0
   for(i in 2:nmcmc){
     s2[i]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
-    
+
     theta[i,]<-theta[i-1,]
     if(i>300){
       mi<-1#max(1,i-300)
@@ -803,15 +804,15 @@ calibrate.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod a
       theta[i,]<-theta.cand
       count<-count+1
     }
-    
+
     pred.curr<-predict(mod,theta[i,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
-    
+
     if(verbose & i%%100==0){
       pr<-c('MCMC iteration',i,myTimestamp(),'count:',count)
       cat(pr,'\n')
     }
   }
-  
+
   return(list(theta=theta,s2=s2,count=count))
 }
 
@@ -821,21 +822,21 @@ calibrateIndep.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to 
   p<-ncol(mod$dat$xx)
   ny<-length(y)
   ns<-mod$mod.list[[1]]$nmcmc-mod$mod.list[[1]]$nburn # number of emu mcmc samples
-  
+
   theta<-matrix(nrow=nmcmc,ncol=p)
   s2<-rep(NA,nmcmc)
-  
+
   #browser()
   theta[1,]<-.5
   pred.curr<-predict(mod,theta[1,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
   s2[1]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
-  
+
   count<-rep(0,p)
   for(i in 2:nmcmc){
     s2[i]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
-    
+
     theta[i,]<-theta[i-1,]
-    
+
     for(j in 1:p){
       theta.cand<-theta[i,]
       theta.cand[j]<-runif(1)
@@ -846,15 +847,15 @@ calibrateIndep.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to 
         count[j]<-count[j]+1
       }
     }
-    
+
     pred.curr<-predict(mod,theta[i,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
-    
+
     if(verbose & i%%100==0){
       pr<-c('MCMC iteration',i,myTimestamp(),'count:',count)
       cat(pr,'\n')
     }
   }
-  
+
   return(list(theta=theta,s2=s2,count=count))
 }
 

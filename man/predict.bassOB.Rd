@@ -4,7 +4,8 @@
 \alias{predict.bassOB}
 \title{BASS Prediction}
 \usage{
-\method{predict}{bassOB}(object, newdata, n.cores = 1, mcmc.use, ...)
+\method{predict}{bassOB}(object, newdata, n.cores = 1, mcmc.use,
+  trunc.error = FALSE, ...)
 }
 \arguments{
 \item{object}{a fitted model, output from the \code{bass} function.}
