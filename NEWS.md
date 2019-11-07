@@ -1,3 +1,9 @@
+# BASS 1.1.2
+- added support for categorical variables
+
+# BASS 1.1.1
+- added non-uniform prior support for continuous variables in Sobol decomposition
+
 # BASS 1.1.0
 - fixed bug in acceptance ratios
 - added support for BASS in principal component space, including Sobol decomposition

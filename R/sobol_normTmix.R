@@ -88,9 +88,9 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
     which.cat<-which(bassMod$cx=='factor')
     prior.cat<-list()
     for(i in 1:length(which.cat)){
-      prior.cat[[i]]<-prior[[which.cat[i]]]
-      prior[[which.cat[i]]]<-NULL
+      prior.cat[i]<-prior[which.cat[i]]
     }
+    prior[which.cat]<-NULL
   } else{
     prior.cat<-NULL
   }
@@ -263,7 +263,7 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
         tl<-add_tlCat(tl,bassMod,mcmc.use.mod,mod) # if there are categorical variables, add the associated info
       tl<-add_tl(tl,p) # calculates and adds the C1 and C2 integrals to tl
       lens<-apply(tl$Kind,1,function(x) length(na.omit(x))) # number of interactions in each basis function
-
+#browser()
       var.tot<-Vu(1:p,tl) # total variance, one for each mcmc iteration (since coefs change each mcmc iteration rather than each model)
 
 
@@ -755,9 +755,11 @@ add_tl<-function(tl,p){
           temp[1:p.df]<-apply(t(1:p.df),2,C2,m=ii,n=jj,tl=tl)
         #}
         #if(length(bb.cat)>0){
-        if(tl$cat)
+        if(tl$cat){
           temp[(p.df+1):p.use]<-apply(t(1:tl$pcat),2,C2Cat,m=ii,n=jj,tl=tl)
-        #}
+          #if(temp[(p.df+1):p.use]==0)
+            #browser()
+        }
         C2.all[ii,jj,]<-C2.all[jj,ii,]<-temp
       #}
     }
@@ -1027,7 +1029,16 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
 
 ## same as C2, but categorical
 C2Cat<-function(k,m,n,tl){ # k is variable (categorical), m & n are basis functions
-  return(length(intersect(tl$sub[[m]][[k]],tl$sub[[n]][[k]]))/tl$nlevels[k])
+
+  if(tl$sub.cnt[n,k]==0){
+    #browser()
+    return(tl$sub.cnt[m,k])
+  }
+
+  if(tl$sub.cnt[m,k]==0)
+    return(tl$sub.cnt[n,k])
+
+  return(length(na.omit(intersect(tl$sub[[m]][[k]],tl$sub[[n]][[k]])))/tl$nlevels[k])
 }
 
 ## matrix used in sobol main effect variances - where most of the time is spent

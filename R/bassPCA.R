@@ -297,14 +297,13 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   for(i in 1:length(prior))
     class(prior[[i]])<-prior[[i]]$dist # class will be used for integral functions, should be uniform, normal, or student
 
-
   if(bassMod$cat){
     which.cat<-which(bassMod$cx=='factor')
     prior.cat<-list()
     for(i in 1:length(which.cat)){
-      prior.cat[[i]]<-prior[[which.cat[i]]]
-      prior[[which.cat[i]]]<-NULL
+      prior.cat[i]<-prior[which.cat[i]]
     }
+    prior[which.cat]<-NULL
   } else{
     prior.cat<-NULL
   }
