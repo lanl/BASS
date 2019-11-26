@@ -717,11 +717,13 @@ add_tl<-function(tl,p){
     C1.all<-C1All(tl) # C1.all[i,j] is C1 (from Chen, 2004) for variable j in basis function i
     if(tl$cat){
       C1.all.cat<-tl$sub.cnt
+      C1.all.cat[C1.all.cat==0]<-1
       C1.all<-cbind(C1.all,C1.all.cat)
     }
   }
 
   #C1.all.temp<-replace(C1.all,which(C1.all==0,arr.ind=T),1) # for products, make 0's into 1's, see Eq 50 of Chen 2004 to understand why (if we didn't the products wouldn't work)
+  #browser()
   C1.all.temp<-C1.all
   C1.all.prod<-apply(C1.all.temp,1,prod) # product over basis functions (from 1 to M)
   tl$CC<-tcrossprod(C1.all.prod) # Eq 35, this is the product from 1:p (M in their notation) for all combinations of basis functions
@@ -1030,6 +1032,11 @@ C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
 ## same as C2, but categorical
 C2Cat<-function(k,m,n,tl){ # k is variable (categorical), m & n are basis functions
 
+  if(tl$sub.cnt[n,k]==0 & tl$sub.cnt[m,k]==0){
+    #browser()
+    return(1)
+  }
+
   if(tl$sub.cnt[n,k]==0){
     #browser()
     return(tl$sub.cnt[m,k])
@@ -1038,7 +1045,12 @@ C2Cat<-function(k,m,n,tl){ # k is variable (categorical), m & n are basis functi
   if(tl$sub.cnt[m,k]==0)
     return(tl$sub.cnt[n,k])
 
-  return(length(na.omit(intersect(tl$sub[[m]][[k]],tl$sub[[n]][[k]])))/tl$nlevels[k])
+  # return(length(na.omit(intersect(tl$sub[[m]][[k]],tl$sub[[n]][[k]])))/tl$nlevels[k])
+  out<-length((intersect(tl$sub[[m]][[k]],tl$sub[[n]][[k]])))/tl$nlevels[k]
+  #print(out)
+  #if(out==0)
+  #  browser()
+  return(out)
 }
 
 ## matrix used in sobol main effect variances - where most of the time is spent
