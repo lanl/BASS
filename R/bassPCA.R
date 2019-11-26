@@ -6,57 +6,51 @@
 #' @title Bayesian Adaptive Spline Surfaces (BASS) with PCA decomposition of response
 #'
 #' @description Decomposes a multivariate or functional response onto a principal component basis and fits a BASS model to each basis coefficient.
-#' @param xx a data frame or matrix of predictors.  Categorical predictors should be included as factors.
-#' @param y a response matrix (functional response).
-#' @param dat list with elements xx (same as above), y (same as above), n.pc (number of principal components used), basis (principal components), newy (reduced dimension y), trunc.error (truncation error), y.m (mean removed before PCA), y.s (sd scaled before PCA)
+#' @param xx a data frame or matrix of predictors with dimension n x p.  Categorical predictors should be included as factors.
+#' @param y a response matrix (functional response) with dimension n x m.
+#' @param dat optional (for more control) list with elements \code{xx} (same as above), \code{y} (same as above), \code{n.pc} (number of principal components used), \code{basis} (principal components with dimension m x \code{n.pc}), \code{newy} (reduced dimension \code{y} with dimension \code{n.pc} x n), \code{trunc.error} (optional truncation error with dimension n x m), \code{y.m} (vector mean removed before PCA with dimension m), \code{y.s} (vector sd scaled before PCA with dimension m).  If \code{dat} is specified, \code{xx}, \code{y} and \code{n.pc} do not need to be specified.
 #' @param n.pc number of principal components to use
-#' @param optionally specify percent of variance to explain instead of n.pc
-#' @param n.cores integer number of cores to use (non Windows machines)
-#' @param ... areguements to be passed to bass.
-#' @details Fits a bass model to each basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.
-#' @return An object of class 'bassOB' with two elements:
-#'   \item{mod.list}{list of individual bass models}
+#' @param perc.var optionally specify percent of variance to explain instead of n.pc
+#' @param n.cores integer number of cores (threads) to use
+#' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
+#' @param center logical whether to subtract the mean before getting the principal components
+#' @param scale logical whether to divide by the standard deviation before getting the principal components
+#' @param ... arguements to be passed to \code{bass} function calls.
+#' @details Gets the PCA decomposition of the response \code{y}, and fits a bass model to each PCA basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.
+#' @return An object of class 'bassBasis' with two elements:
+#'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
 #'   \item{dat}{same as dat above}
 #' @keywords nonparametric regression, splines, functional data analysis
-#' @seealso \link{predict.bassOB} for prediction and \link{sobolOB} for sensitivity analysis.
+#' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
 #' @useDynLib BASS, .registration = TRUE
 #' @import stats
 #' @import utils
 #' @example inst/examplesPCA.R
 #'
-bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,center=T,scale=F,...){
+bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,parType="fork",center=T,scale=F,...){
   if(is.null(dat))
     dat<-bassPCAsetup(xx,y,n.pc,perc.var,center,scale)
 
   require(parallel)
+  if(n.cores>detectCores())
+    warning(paste0("Specified n.cores = ",n.cores,'. Proceeding with n.cores = min(n.cores,dat$n.pc,detectCores()) = ',min(n.cores,dat$n.pc,detectCores())))
   n.cores<-min(n.cores,dat$n.pc,detectCores())
-  mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule=F)
+
+  if(n.cores==1){
+    mod.list<-mclapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+  } else if(parType=='socket'){
+    cl <- makeCluster(n.cores)
+    mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+    stopCluster(cl)
+  } else if(parType=='fork'){
+    mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule = F)
+  }
 
   ret<-list(mod.list=mod.list,dat=dat)
-  class(ret)<-'bassOB'
+  class(ret)<-'bassBasis'
   return(ret)
 }
-
-
-
-
-# Sys.info()["sysname"]
-# #  sysname
-# #"Windows"
-#
-# library(parallel)
-# cl <- makeCluster(getOption("cl.cores", 2))
-# l <- list(1, 2)
-# system.time(
-#   parLapply(cl, l, function(x) {
-#     Sys.sleep(10)
-#   })
-# )
-# #user  system elapsed
-# #0       0      10
-#
-# stopCluster(cl)
 
 
 
@@ -69,7 +63,7 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
   xx<-as.data.frame(xx)
 
   if(nrow(y)==1 | ncol(y)==1)
-    stop('Non-function y: use bass instead of bassPCA')
+    stop('univariate y: use bass instead of bassPCA')
 
   if(ncol(y)!=nrow(xx))
     y<-t(y)
@@ -96,39 +90,43 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
     n.pc<-which(cumsum(ev/sum(ev))*100>perc.var)[1]
   }
 
-  basis<-S$u[,1:n.pc]%*%diag(S$d[1:n.pc]) # columns are basis functions
-  newy<-t(S$v[,1:n.pc])
+  basis<-S$u[,1:n.pc,drop=F]%*%diag(S$d[1:n.pc],nrow=n.pc) # columns are basis functions
+  newy<-t(S$v[,1:n.pc,drop=F])
 
   trunc.error<-basis%*%newy - yc
 
-  ret<-list(xx=xx,y=y,n.pc=n.pc,basis=basis,newy=newy,trunc.error=trunc.error,y.m=y.m,y.s=y.s)
+  ret<-list(xx=xx,y=y,n.pc=n.pc,basis=basis,newy=newy,trunc.error=trunc.error,y.m=y.m,y.s=y.s,ev=S$d^2)
   class(ret)<-'bassPCAsetup'
   return(ret)
 }
 
 
 
-#' @title Bayesian Adaptive Spline Surfaces (BASS)
+#' @title Bayesian Adaptive Spline Surfaces (BASS) with basis decomposition of response
 #'
-#' @description Fits a BASS model using RJMCMC.  Optionally uses parallel tempering to improve mixing.  Can be used with scalar or functional response.  Also can use categorical inputs.
-#' @param dat something.
-#' @param ... to be passed to bass.
-#' @details Explores BASS model space by RJMCMC.  The BASS model has \deqn{y = f(x) + \epsilon,  ~~\epsilon \sim N(0,\sigma^2)} \deqn{f(x) = a_0 + \sum_{m=1}^M a_m B_m(x)} and \eqn{B_m(x)} is a BASS basis function (tensor product of spline basis functions). We use priors \deqn{a \sim N(0,\sigma^2/\tau (B'B)^{-1})} \deqn{M \sim Poisson(\lambda)} as well as the priors mentioned in the arguments above.
-#' @return An object of class 'bass'.  The other output will only be useful to the advanced user.  Rather, users may be interested in prediction and sensitivity analysis, which are obtained by passing the entire object to the predict.bass or sobol functions.
+#' @description Fits a BASS model to basis coefficients under the specified basis.
+#' @param dat list that includes elements \code{xx}, \code{n.pc} (number of basis functions), \code{basis} (dimension m x \code{n.pc}), \code{newy} (dimension \code{n.pc} x n), \code{trunc.error} (optional truncation error with dimension n x m), \code{y.m} (vector mean removed before basis decomposition with dimension m), \code{y.s} (vector sd scaled before basis decomposition with dimension m).  See the documentation of \code{bassPCA} for more details.
+#' @param ... arguements to be passed to \code{bass} function calls.
+#' @details Under a user defined basis decomposition, fits a bass model to each PCA basis coefficient independently, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.  The basis does not need to be orthogonal, but independent modeling of basis coefficients should be sensible.
+#' @return An object of class 'bassBasis' with two elements:
+#'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
+#'   \item{dat}{same as dat above}
 #' @keywords nonparametric regression, splines, functional data analysis
-#' @seealso \link{predict.bass} for prediction and \link{sobol} for sensitivity analysis.
+#' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
 #' @useDynLib BASS, .registration = TRUE
 #' @import stats
 #' @import utils
-#'
-bassOB<-function(dat,n.cores=1,...){
+#' @example inst/examplesPCA.R
+bassBasis<-function(dat,n.cores=1,...){
 
   require(parallel)
-  mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule=F)
+  cl <- makeCluster(n.cores)
+  mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+  stopCluster(cl)
 
   ret<-list(mod.list=mod.list,dat=dat)
-  class(ret)<-'bassOB'
+  class(ret)<-'bassBasis'
   return(ret)
 }
 
@@ -153,25 +151,53 @@ bassOB<-function(dat,n.cores=1,...){
 #'
 #' @description Predict function for BASS.  Outputs the posterior predictive samples based on the specified MCMC iterations.
 #' @param object a fitted model, output from the \code{bass} function.
-#' @param newdata a matrix of new input values at which to predict.  The columns should correspond to the same variables used in the \code{bass} function.
-#' @param newdata.func a matrix of new values of the functional variable.  If none, the same values will be used as in the training data.
+#' @param newdata a matrix of new input values at which to predict.  The columns should correspond to the same variables used in the \code{bassBasis} or \code{bassPCA}  functions.
 #' @param mcmc.use a vector indexing which MCMC iterations to use for prediction.
-#' @param verbose logical; should progress be displayed?
+#' @param trunc.error logical, use basis truncation error when predicting?
+#' @param n.cores number of cores, though 1 is often the fastest.
+#' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param ... further arguments passed to or from other methods.
-#' @details Efficiently predicts when two MCMC iterations have the same basis functions (but different weights).
-#' @return If model output is a scalar, this returns a matrix with the same number of rows as \code{newdata} and columns corresponding to the the MCMC iterations \code{mcmc.use}.  These are samples from the posterior predictive distribution.  If model output is functional, this returns an array with first dimension corresponding to MCMC iteration, second dimension corresponding to the rows of \code{newdata}, and third dimension corresponding to the rows of \code{newdata.func}.
-#' @seealso \link{bass} for model fitting and \link{sobol} for sensitivity analysis.
+#' @details Prediction combined across \code{bass} models.
+#' @return An array with first dimension corresponding to MCMC iteration, second dimension corresponding to the rows of \code{newdata}, and third dimension corresponding to the multivariate/functional response.
+#' @seealso \link{bassPCA} and \link{bassBasis} for model fitting and \link{sobolBasis} for sensitivity analysis.
 #' @export
 #' @examples
 #' # See examples in bass documentation.
 #'
-predict.bassOB<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
+predict.bassBasis<-function(object,newdata,mcmc.use,trunc.error=FALSE,n.cores=1,parType="fork",...){
   require(parallel)
-  newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
-  out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(newy.pred[i,,],object$dat),mc.cores=min(n.cores,length(mcmc.use)))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+  if(n.cores==1){
+    # no parallel
+    newy.pred<-array(unlist(lapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
-  out<-aperm(out,c(3,2,1))
+    #browser()
+    out<-array(unlist(lapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+  } else if(parType=='socket'){
+
+    # parLapply (socket)
+
+    cl <- makeCluster(min(n.cores,object$dat$n.pc,detectCores())) # possibly a faster way to do this, but would need to keep cluster around
+    clusterExport(cl,varlist=c("newdata"),envir=environment())
+
+    newy.pred<-array(unlist(parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+
+
+    out<-array(unlist(parLapply(cl,1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+
+    stopCluster(cl)
+  } else if(parType=='fork'){
+    # mclapply (fork - faster than socket, but not compatible with windows)
+    newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=n.cores)),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+
+    out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat),mc.cores=n.cores)),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+  }
+
+
+  out<-aperm(out,c(3,2,1)) # + sample of truncation error
+
+  if(trunc.error)
+    out<-out+array(truncErrSampN(length(mcmc.use)*nrow(newdata),object$dat$trunc.error),dim=c(length(mcmc.use),nrow(newdata),length(object$dat$y.m)))
 
   return(out) # should be nmcmc x npred x nfunc
 }
@@ -188,7 +214,7 @@ predict1mod<-function(mod,newdata,mcmc.use,...){
   pmat
 }
 
-predict_fast.bassOB<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
+predict_fast.bassBasis<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
   require(parallel)
   newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod_fast(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
@@ -206,7 +232,13 @@ predict1mod_fast<-function(mod,newdata,mcmc.use,...){
 }
 
 
+truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the truncation
+  #   errors at each space and time, vectorized
+  # te.mat is truncation error matrix, ncol is number of sims, nrow is length of EOFs
+  #   (space time combinations)
 
+  t(te.mat[,sample.int(nrow(te.mat),n,replace=T)])
+}
 
 
 
@@ -229,7 +261,7 @@ predict1mod_fast<-function(mod,newdata,mcmc.use,...){
 #' @title BASS Sensitivity Analysis
 #'
 #' @description Decomposes the variance of the BASS model into variance due to main effects, two way interactions, and so on, similar to the ANOVA decomposition for linear models.  Uses the Sobol' decomposition, which can be done analytically for MARS models.
-#' @param mod output from the \code{bassOB} or \code{bassPCA} function.
+#' @param mod output from the \code{bassBasis} or \code{bassPCA} function.
 #' @param int.order an integer indicating the highest order of interactions to include in the Sobol decomposition.
 #' @param prior a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  If unspecified, a uniform is assumed with the same bounds as are represented in the input to xx.
 #' @param mcmc.use an integer vector indexing which MCMC iterations to use for sensitivity analysis.
@@ -252,7 +284,7 @@ predict1mod_fast<-function(mod,newdata,mcmc.use,...){
 #' @examples
 #' # See examples in bass documentation.
 
-sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,preschedule=F,plot=F){
+sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,preschedule=F,plot=F){
 
 
 
@@ -381,13 +413,13 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   f0r2<-(pcs%*%w0)^2
 
   max.nbasis<-max(unlist(lapply(pc.mod,function(x) x$nbasis[mcmc.use])))
-  C1OB.array<-array(dim=c(n.pc,p,max.nbasis))
+  C1Basis.array<-array(dim=c(n.pc,p,max.nbasis))
   for(i in 1:n.pc){
     nb<-pc.mod[[i]]$nbasis[mcmc.use]
     mcmc.mod.usei<-pc.mod[[i]]$model.lookup[mcmc.use]
     for(j in 1:p){
       for(k in 1:nb){
-        C1OB.array[i,j,k]<-C1OB(prior,pc.mod,j,k,i,mcmc.mod.usei)
+        C1Basis.array[i,j,k]<-C1Basis(prior,pc.mod,j,k,i,mcmc.mod.usei)
       }
     }
     #print(i)
@@ -395,7 +427,7 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
 
   # browser()
   #
-  # C2OB.array<-array(dim=c(n.pc,n.pc,p,max.nbasis,max.nbasis))
+  # C2Basis.array<-array(dim=c(n.pc,n.pc,p,max.nbasis,max.nbasis))
   # for(i1 in 1:n.pc){
   #   nb1<-pc.mod[[i1]]$nbasis[mcmc.use]
   #   mcmc.mod.usei1<-pc.mod[[i1]]$model.lookup[mcmc.use]
@@ -405,7 +437,7 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   #     for(j in 1:p){
   #       for(k1 in 1:nb1){
   #         for(k2 in 1:nb2){
-  #           C2OB.array[i1,i2,j,k1,k2]<-C2OB(pc.mod,j,k1,k2,i1,i2,mcmc.mod.usei1,mcmc.mod.usei2) #C2OB(pc.mod,l,mi,mj,i,j,mcmc.mod.usei,mcmc.mod.usej)
+  #           C2Basis.array[i1,i2,j,k1,k2]<-C2Basis(pc.mod,j,k1,k2,i1,i2,mcmc.mod.usei1,mcmc.mod.usei2) #C2Basis(pc.mod,l,mi,mj,i,j,mcmc.mod.usei,mcmc.mod.usej)
   #         }
   #       }
   #     }
@@ -423,11 +455,11 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
   cat('Integrating',timestamp(quiet = T),'\n')
 
   u.list.temp<-c(list(1:p),u.list1)
-  ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1OB.array),mc.cores=ncores,mc.preschedule = preschedule)
+  ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=ncores,mc.preschedule = preschedule)
   V.tot<-ints1.temp[[1]]
   ints1<-ints1.temp[-1]
 
-  #ints1<-mclapply(u.list1,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1OB.array),mc.cores=ncores,mc.preschedule = preschedule)
+  #ints1<-mclapply(u.list1,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=ncores,mc.preschedule = preschedule)
   ints<-list()
   ints[[1]]<-do.call(cbind,ints1[1:ncol(u.list[[1]])])
   if(int.order>1){
@@ -533,16 +565,16 @@ sobolOB<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,presche
 ################################################################################
 ## Functions
 ################################################################################
-func.hat<-function(prior,u,pc.mod,pcs,mcmc.use,f0r2,C1OB.array){ # could speed this up
+func.hat<-function(prior,u,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array){ # could speed this up
   #browser()
   res<-rep(0,nrow(pcs))
   n.pc<-length(pc.mod)
   for(i in 1:n.pc){
-    res<-res+pcs[,i]^2*Ccross(prior,pc.mod,i,i,u,mcmc.use,C1OB.array)
+    res<-res+pcs[,i]^2*Ccross(prior,pc.mod,i,i,u,mcmc.use,C1Basis.array)
 
     if(i<n.pc){
       for(j in (i+1):n.pc){
-        res<-res+2*pcs[,i]*pcs[,j]*Ccross(prior,pc.mod,i,j,u,mcmc.use,C1OB.array)
+        res<-res+2*pcs[,i]*pcs[,j]*Ccross(prior,pc.mod,i,j,u,mcmc.use,C1Basis.array)
         #print(c(i,j))
       }
     }
@@ -550,7 +582,7 @@ func.hat<-function(prior,u,pc.mod,pcs,mcmc.use,f0r2,C1OB.array){ # could speed t
   return(res-f0r2)
 }
 
-Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1OB.array){ # inner product of main effects from different eof models
+Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1Basis.array){ # inner product of main effects from different eof models
   p<-pc.mod[[1]]$p
   mcmc.mod.usei<-pc.mod[[i]]$model.lookup[mcmc.use]
   mcmc.mod.usej<-pc.mod[[j]]$model.lookup[mcmc.use]
@@ -559,7 +591,7 @@ Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1OB.array){ # inner product of m
   Mj<-pc.mod[[j]]$nbasis[mcmc.use]
   mat<-matrix(nrow=Mi,ncol=Mj)
 
-  #CC<-C2OB.temp<-CCu<-matrix(1,nrow=Mi,ncol=Mj)
+  #CC<-C2Basis.temp<-CCu<-matrix(1,nrow=Mi,ncol=Mj)
 
   a0i<-pc.mod[[i]]$beta[mcmc.use,1]
   a0j<-pc.mod[[j]]$beta[mcmc.use,1]
@@ -578,15 +610,15 @@ Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1OB.array){ # inner product of m
         temp1<-ai[mi]*aj[mj]
         temp2<-temp3<-1
         for(l in (1:p)[-u]){
-          #temp2<-temp2*C1OB(pc.mod,l,mi,i,mcmc.mod.usei)*C1OB(pc.mod,l,mj,j,mcmc.mod.usej) # make a C1OB lookup table instead (this is the bottleneck)
-          temp2<-temp2*C1OB.array[i,l,mi]*C1OB.array[j,l,mj]
+          #temp2<-temp2*C1Basis(pc.mod,l,mi,i,mcmc.mod.usei)*C1Basis(pc.mod,l,mj,j,mcmc.mod.usej) # make a C1Basis lookup table instead (this is the bottleneck)
+          temp2<-temp2*C1Basis.array[i,l,mi]*C1Basis.array[j,l,mj]
           #browser()
         }
         #CC[mi,mj]<-temp2
         for(l in u){
-          temp3<-temp3*C2OB(prior,pc.mod,l,mi,mj,i,j,mcmc.mod.usei,mcmc.mod.usej) # would be nice to use a lookup table here too, but its too big
+          temp3<-temp3*C2Basis(prior,pc.mod,l,mi,mj,i,j,mcmc.mod.usei,mcmc.mod.usej) # would be nice to use a lookup table here too, but its too big
         }
-        #C2OB.temp[mi,mj]<-temp3
+        #C2Basis.temp[mi,mj]<-temp3
         #CCu[mi,mj]<-temp4
         out<-out+temp1*temp2*temp3#(temp3-1) not -1 since we subtract f0^2 later
         #print(out)
@@ -595,14 +627,14 @@ Ccross<-function(prior,pc.mod,i,j,u,mcmc.use=1,C1OB.array){ # inner product of m
       }
     }
   }
-  #out<-out+ai%*%(CC*C2OB.temp/CCu)%*%aj
+  #out<-out+ai%*%(CC*C2Basis.temp/CCu)%*%aj
   if(length(out)==0)
     browser()
   return(out)
 }
 
 
-C1OB<-function(prior,pc.mod,l,m,pc,mcmc.mod.use){ # l = variable, m = basis function, pc = eof index
+C1Basis<-function(prior,pc.mod,l,m,pc,mcmc.mod.use){ # l = variable, m = basis function, pc = eof index
   if(l<=pc.mod[[pc]]$pdes){
     int.use.l<-which(pc.mod[[pc]]$vars.des[mcmc.mod.use,m,]==l)
     if(length(int.use.l)==0)
@@ -652,19 +684,19 @@ C1OB<-function(prior,pc.mod,l,m,pc,mcmc.mod.use){ # l = variable, m = basis func
 
 
 
-C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
+C2Basis<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
   if(l<=pc.mod[[pc1]]$pdes){ # could do pc1 or pc2, they have the same vars
     int.use.l1<-which(pc.mod[[pc1]]$vars.des[mcmc.mod.use1,m1,]==l)
     int.use.l2<-which(pc.mod[[pc2]]$vars.des[mcmc.mod.use2,m2,]==l)
     if(length(int.use.l1)==0 & length(int.use.l2)==0)
       return(1)
     if(length(int.use.l1)==0)
-      return(C1OB(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
+      return(C1Basis(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
     if(length(int.use.l2)==0)
-      return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
+      return(C1Basis(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
 
     #if(pc1==pc2 & m1==m2)
-    #  return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1)^2) ## is this right??
+    #  return(C1Basis(prior,pc.mod,l,m1,pc1,mcmc.mod.use1)^2) ## is this right??
 
     q<-pc.mod[[pc1]]$degree
     s1<-pc.mod[[pc1]]$signs[mcmc.mod.use1,m1,int.use.l1]
@@ -685,7 +717,7 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
       s2<-temp
     }
     #browser()
-    return(C22OB(prior[[l]],t1,t2,s1,s2,q,m1,m2,pc1,pc2))
+    return(C22Basis(prior[[l]],t1,t2,s1,s2,q,m1,m2,pc1,pc2))
   } else{
     l.cat<-l-pc.mod[[pc1]]$pdes
 
@@ -695,9 +727,9 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
     if(length(int.use.l1)==0 & length(int.use.l2)==0)
       return(1)
     if(length(int.use.l1)==0)
-      return(C1OB(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
+      return(C1Basis(prior,pc.mod,l,m2,pc2,mcmc.mod.use2))
     if(length(int.use.l2)==0)
-      return(C1OB(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
+      return(C1Basis(prior,pc.mod,l,m1,pc1,mcmc.mod.use1))
 
     #browser()
     sub1<-pc.mod[[pc1]]$sub.list[[mcmc.mod.use1]][[m1]][[int.use.l1]]
@@ -710,7 +742,7 @@ C2OB<-function(prior,pc.mod,l,m1,m2,pc1,pc2,mcmc.mod.use1,mcmc.mod.use2){
 }
 
 
-C22OB<-function(prior,t1,t2,s1,s2,q,m1,m2,pc1,pc2){ # t1<t2
+C22Basis<-function(prior,t1,t2,s1,s2,q,m1,m2,pc1,pc2){ # t1<t2
   cc<-const(signs=c(s1,s2),knots=c(t1,t2),degree=q)
   if((s1*s2)==0){
     return(0)
@@ -753,7 +785,7 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
     for(m in 1:pc.mod[[pc]]$nbasis[mcmc.use]){
       out1<-pc.mod[[pc]]$beta[mcmc.use,1+m]
       for(l in 1:pc.mod[[pc]]$p){
-        out1<-out1*C1OB(prior,pc.mod,l,m,pc,mcmc.mod.use)
+        out1<-out1*C1Basis(prior,pc.mod,l,m,pc,mcmc.mod.use)
       }
       out<-out+out1
     }
@@ -767,7 +799,7 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
 ##################################################################################################################################################################
 ## modularized calibration
 
-calibrate.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
+calibrate.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
   p<-ncol(mod$dat$xx)
   ny<-length(y)
   ns<-mod$mod.list[[1]]$nmcmc-mod$mod.list[[1]]$nburn # number of emu mcmc samples
@@ -817,7 +849,7 @@ calibrate.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod a
 
 
 
-calibrateIndep.bassOB<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
+calibrateIndep.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
   p<-ncol(mod$dat$xx)
   ny<-length(y)
   ns<-mod$mod.list[[1]]$nmcmc-mod$mod.list[[1]]$nburn # number of emu mcmc samples

@@ -9,7 +9,7 @@
 #' @param quants quantiles for intervals, if desired.  NULL if not desired.
 #' @param ... graphical parameters.
 #' @details The first two plots are trace plots for diagnosing convergence.  The third plot is posterior predicted vs observed, with intervals for predictions.  The fourth plot is a histogram of the residuals (of the posterior mean model), with a red curve showing the assumed Normal density (using posterior mean variance).  If \code{bass} was run with \code{save.yhat = FALSE}, the third and fourth plots are omitted.
-#' @export 
+#' @export
 #' @import graphics
 #' @seealso \link{bass}, \link{predict.bass}, \link{sobol}
 #' @examples
@@ -47,7 +47,7 @@ plot.bass<-function(x,quants=c(.025,.975),...){
       segments(x$y,qq1,x$y,qq2,col='lightgrey')
     points(x$y,x$yhat.mean)
     abline(a=0,b=1,col=2)
-  
+
     hist(x$y-x$yhat.mean,freq=F,main='Posterior mean residuals',xlab='residuals')
     curve(dnorm(x,sd=mean(s)),col=2,add=T)
   }
@@ -59,51 +59,47 @@ plot.bass<-function(x,quants=c(.025,.975),...){
 #' @title BASS Plot Diagnostics
 #'
 #' @description Generate diagnostic plots for BASS model fit.
-#' @param x a \code{bass} object.
+#' @param x a \code{bassBasis} object.
 #' @param quants quantiles for intervals, if desired.  NULL if not desired.
+#' @param pred logical, should predictive performance be plotted?
 #' @param ... graphical parameters.
-#' @details The first two plots are trace plots for diagnosing convergence.  The third plot is posterior predicted vs observed, with intervals for predictions.  The fourth plot is a histogram of the residuals (of the posterior mean model), with a red curve showing the assumed Normal density (using posterior mean variance).  If \code{bass} was run with \code{save.yhat = FALSE}, the third and fourth plots are omitted.
-#' @export 
+#' @details The first two plots are trace plots for diagnosing convergence.  The third plot is posterior predicted vs observed, with intervals for predictions.  The fourth plot is a histogram of the residuals (of the posterior mean model).  If \code{pred = FALSE}, the third and fourth plots are omitted.
+#' @export
 #' @import graphics
-#' @seealso \link{bass}, \link{predict.bass}, \link{sobol}
+#' @seealso \link{bassBasis}, \link{bassPCA}, \link{predict.bassBasis}, \link{sobolBasis}
 #' @examples
-#' # See examples in bass documentation.
+#' # See examples in bassBasis documentation.
 #'
-plot.bassOB<-function(x,quants=c(.025,.975),...){
-  if(class(x)!='bassOB')
-    stop('x must be an object of class bassOB')
-  pred<-T
-  if(is.null(x$yhat.mean))
-    pred<-F
+plot.bassBasis<-function(x,quants=c(.025,.975),pred=T,...){
+  if(class(x)!='bassBasis')
+    stop('x must be an object of class bassBasis')
   op<-par(no.readonly=T)
   if(pred)
     par(mfrow=c(2,2))
   else
     par(mfrow=c(1,2))
-  plot(x$nbasis,type='l',ylab='number of basis functions',xlab='MCMC iteration (post-burn)')
-  plot(x$s2,type='l',ylab='error variance',xlab='MCMC iteration (post-burn)')
+  matplot(do.call(cbind,lapply(x$mod.list,function(ii) ii$nbasis)),type='l',ylab='number of basis functions',xlab='MCMC iteration (post-burn)')
+  matplot(do.call(cbind,lapply(x$mod.list,function(ii) ii$s2)),type='l',ylab='error variance',xlab='MCMC iteration (post-burn)')
   if(pred){
-    margin<-2
-    if(x$func)
-      margin<-2:3
-    s<-sqrt(x$s2)
+    pp<-predict(x,x$dat$xx,mcmc.use=1:length(x$mod.list[[1]]$s2))
+    mm<-t(apply(pp,2:3,mean))
     if(!is.null(quants)){
-      qq1<-apply(x$yhat+qnorm(quants[2])*s,margin,quantile,probs=quants[2])
-      qq2<-apply(x$yhat+qnorm(quants[1])*s,margin,quantile,probs=quants[1])
+      qq1<-t(apply(pp,2:3,quantile,probs=quants[2]))
+      qq2<-t(apply(pp,2:3,quantile,probs=quants[1]))
       ylim=range(c(qq1,qq2))
       ylab='interval'
     } else{
-      ylim=range(x$yhat.mean)
+      ylim=range(mm,x$dat$y)
       ylab='mean'
     }
-    plot(x$y,x$yhat.mean,ylim=ylim,ylab=paste('posterior predictive',ylab),xlab='observed',main='Training Fit',type='n',...)
+    #browser()
+    plot(x$dat$y,mm,ylim=ylim,xlim=ylim,ylab=paste('posterior predictive',ylab),xlab='observed',main='Training Fit',type='n',...)
     if(!is.null(quants))
-      segments(x$y,qq1,x$y,qq2,col='lightgrey')
-    points(x$y,x$yhat.mean)
+      segments(x$dat$y,qq1,x$dat$y,qq2,col='lightgrey')
+    points(x$dat$y,mm)
     abline(a=0,b=1,col=2)
-    
-    hist(x$y-x$yhat.mean,freq=F,main='Posterior mean residuals',xlab='residuals')
-    curve(dnorm(x,sd=mean(s)),col=2,add=T)
+
+    hist(x$dat$y-mm,freq=F,main='Posterior mean residuals',xlab='residuals')
   }
   par(op)
 }
