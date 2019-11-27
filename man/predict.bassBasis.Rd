@@ -4,7 +4,7 @@
 \alias{predict.bassBasis}
 \title{BASS Prediction}
 \usage{
-\method{predict}{bassBasis}(object, newdata, mcmc.use,
+\method{predict}{bassBasis}(object, newdata, mcmc.use = NULL,
   trunc.error = FALSE, n.cores = 1, parType = "fork", ...)
 }
 \arguments{

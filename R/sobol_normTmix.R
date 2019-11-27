@@ -863,6 +863,7 @@ intabq1.student<-function(prior,a,b,t,q){
     #integrate(function(x) (x-t)*dt.scaled(x,prior$df[k],prior$mean[k],prior$sd[k]),lower=a,upper=b)
     out<-out+prior$weights[k]*int
   }
+  browser()
   out
 }
 

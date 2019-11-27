@@ -23,9 +23,9 @@ bassPCA(xx = NULL, y = NULL, dat = NULL, n.pc = NULL,
 
 \item{parType}{either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.}
 
-\item{center}{logical whether to subtract the mean before getting the principal components}
+\item{center}{logical whether to subtract the mean before getting the principal components, or else a numeric vector of dimension m for the center to be used}
 
-\item{scale}{logical whether to divide by the standard deviation before getting the principal components}
+\item{scale}{logical whether to divide by the standard deviation before getting the principal components, or else a numeric vector of dimension m for the scale to be used}
 
 \item{...}{arguements to be passed to \code{bass} function calls.}
 }

@@ -4,10 +4,14 @@
 \alias{bassBasis}
 \title{Bayesian Adaptive Spline Surfaces (BASS) with basis decomposition of response}
 \usage{
-bassBasis(dat, n.cores = 1, ...)
+bassBasis(dat, n.cores = 1, parType = "fork", ...)
 }
 \arguments{
 \item{dat}{list that includes elements \code{xx}, \code{n.pc} (number of basis functions), \code{basis} (dimension m x \code{n.pc}), \code{newy} (dimension \code{n.pc} x n), \code{trunc.error} (optional truncation error with dimension n x m), \code{y.m} (vector mean removed before basis decomposition with dimension m), \code{y.s} (vector sd scaled before basis decomposition with dimension m).  See the documentation of \code{bassPCA} for more details.}
+
+\item{n.cores}{integer number of cores (threads) to use}
+
+\item{parType}{either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.}
 
 \item{...}{arguements to be passed to \code{bass} function calls.}
 }

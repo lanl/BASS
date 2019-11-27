@@ -4,21 +4,21 @@
 \alias{sobolBasis}
 \title{BASS Sensitivity Analysis}
 \usage{
-sobolBasis(mod, int.order, prior = NULL, mcmc.use = 1, nind = NULL,
-  ncores = 1, preschedule = F, plot = F)
+sobolBasis(mod, int.order, prior = NULL, mcmc.use = NULL,
+  nind = NULL, n.cores = 1, preschedule = F, plot = F)
 }
 \arguments{
 \item{mod}{output from the \code{bassBasis} or \code{bassPCA} function.}
 
 \item{int.order}{an integer indicating the highest order of interactions to include in the Sobol decomposition.}
 
-\item{prior}{a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  If unspecified, a uniform is assumed with the same bounds as are represented in the input to xx.}
+\item{prior}{a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  Each prior is specified as a list with elements \code{dist} (one of \code{c("normal", "student", "uniform")}), \code{trunc} (a vector of dimension 2 indicating the lower and upper truncation bounds, taken to be the data bounds if omitted), and for "normal" or "student" priors, \code{mean} (scalar mean of the Normal/Student, or a vector of means for a mixture of Normals or Students), \code{sd} (scalar standard deviation of the Normal/Student, or a vector of standard deviations for a mixture of Normals or Students), \code{df} (scalar degrees of freedom of the Student, or a vector of degrees of freedom for a mixture of Students), and \code{weights} (a vector of weights that sum to one for the mixture components, or the scalar 1).  If unspecified, a uniform is assumed with the same bounds as are represented in the input to mod.}
 
-\item{mcmc.use}{an integer vector indexing which MCMC iterations to use for sensitivity analysis.}
+\item{mcmc.use}{an integer indicating which MCMC iteration to use for sensitivity analysis. Defaults to the last iteration.}
 
 \item{nind}{number of Sobol indices to keep (will keep the largest nind).}
 
-\item{ncores}{number of cores to use (nearly linear speedup for adding cores).}
+\item{n.cores}{number of cores to use (nearly linear speedup for adding cores).}
 
 \item{preschedule}{to be passed to mclapply.}
 
@@ -43,7 +43,7 @@ Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (ea
 # See examples in bass documentation.
 }
 \seealso{
-\link{bass} for model fitting and \link{predict.bass} for prediction.
+\link{bassPCA} and \link{bassBasis} for model fitting and \link{predict.bassBasis} for prediction.
 }
 \keyword{Sobol}
 \keyword{decomposition}

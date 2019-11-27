@@ -81,11 +81,11 @@ plot.bassBasis<-function(x,quants=c(.025,.975),pred=T,...){
   matplot(do.call(cbind,lapply(x$mod.list,function(ii) ii$nbasis)),type='l',ylab='number of basis functions',xlab='MCMC iteration (post-burn)')
   matplot(do.call(cbind,lapply(x$mod.list,function(ii) ii$s2)),type='l',ylab='error variance',xlab='MCMC iteration (post-burn)')
   if(pred){
-    pp<-predict(x,x$dat$xx,mcmc.use=1:length(x$mod.list[[1]]$s2))
-    mm<-t(apply(pp,2:3,mean))
+    pp<-predict(x,x$dat$xx)
+    mm<-apply(pp,2:3,mean)
     if(!is.null(quants)){
-      qq1<-t(apply(pp,2:3,quantile,probs=quants[2]))
-      qq2<-t(apply(pp,2:3,quantile,probs=quants[1]))
+      qq1<-apply(pp,2:3,quantile,probs=quants[2])
+      qq2<-apply(pp,2:3,quantile,probs=quants[1])
       ylim=range(c(qq1,qq2))
       ylab='interval'
     } else{

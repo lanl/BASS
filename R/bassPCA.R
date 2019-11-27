@@ -13,8 +13,8 @@
 #' @param perc.var optionally specify percent of variance to explain instead of n.pc
 #' @param n.cores integer number of cores (threads) to use
 #' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
-#' @param center logical whether to subtract the mean before getting the principal components
-#' @param scale logical whether to divide by the standard deviation before getting the principal components
+#' @param center logical whether to subtract the mean before getting the principal components, or else a numeric vector of dimension m for the center to be used
+#' @param scale logical whether to divide by the standard deviation before getting the principal components, or else a numeric vector of dimension m for the scale to be used
 #' @param ... arguements to be passed to \code{bass} function calls.
 #' @details Gets the PCA decomposition of the response \code{y}, and fits a bass model to each PCA basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.
 #' @return An object of class 'bassBasis' with two elements:
@@ -32,24 +32,7 @@ bassPCA<-function(xx=NULL,y=NULL,dat=NULL,n.pc=NULL,perc.var=99,n.cores=1,parTyp
   if(is.null(dat))
     dat<-bassPCAsetup(xx,y,n.pc,perc.var,center,scale)
 
-  require(parallel)
-  if(n.cores>detectCores())
-    warning(paste0("Specified n.cores = ",n.cores,'. Proceeding with n.cores = min(n.cores,dat$n.pc,detectCores()) = ',min(n.cores,dat$n.pc,detectCores())))
-  n.cores<-min(n.cores,dat$n.pc,detectCores())
-
-  if(n.cores==1){
-    mod.list<-mclapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
-  } else if(parType=='socket'){
-    cl <- makeCluster(n.cores)
-    mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
-    stopCluster(cl)
-  } else if(parType=='fork'){
-    mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule = F)
-  }
-
-  ret<-list(mod.list=mod.list,dat=dat)
-  class(ret)<-'bassBasis'
-  return(ret)
+  return(bassBasis(dat,n.cores,parType = parType,...))
 }
 
 
@@ -65,25 +48,41 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
   if(nrow(y)==1 | ncol(y)==1)
     stop('univariate y: use bass instead of bassPCA')
 
-  if(ncol(y)!=nrow(xx))
+  if(nrow(y)!=nrow(xx))
     y<-t(y)
-  if(ncol(y)!=nrow(xx))
+  if(nrow(y)!=nrow(xx))
     stop('x,y dimension mismatch')
+  if(ncol(y)==nrow(y))
+    warning("Caution: because y is square, please ensure that each row of x corresponds to a row of y (and not a column)")
 
   if(!is.null(n.pc)){
     if(n.pc>nrow(y))
       warning('n.pc too large, using all PCs intead')
   }
 
+  if(class(center)=='logical' & length(center)==1){
+    y.m<-colMeans(y)
+    if(!center)
+      y.m<-rep(0,ncol(y))
+  } else if(class(center)=='numeric' & length(center)==ncol(y)){
+    y.m<-center
+  } else{
+    stop("center parameter wrong dimension")
+  }
 
-  y.m<-rowMeans(y)
-  if(!center)
-    y.m<-0
-  y.s<-apply(y,1,sd)
-  if(!scale)
-    y.s<-1
-  yc<-(y-y.m)/y.s
+  if(class(scale)=='logical' & length(scale)==1){
+    y.s<-apply(y,2,scale)
+    if(!scale)
+      y.s<-rep(1,ncol(y))
+  } else if(class(scale)=='numeric' & length(scale)==ncol(y)){
+    y.s<-scale
+  } else{
+    stop("scale parameter wrong dimension")
+  }
+
+  yc<-t(scale(y,center=y.m,scale=y.s)) # maybe could get away with fewer transposes, but could require a lot of refactoring
   S<-svd(yc)
+
 
   if(is.null(n.pc)){
     ev<-S$d^2
@@ -106,6 +105,8 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 #'
 #' @description Fits a BASS model to basis coefficients under the specified basis.
 #' @param dat list that includes elements \code{xx}, \code{n.pc} (number of basis functions), \code{basis} (dimension m x \code{n.pc}), \code{newy} (dimension \code{n.pc} x n), \code{trunc.error} (optional truncation error with dimension n x m), \code{y.m} (vector mean removed before basis decomposition with dimension m), \code{y.s} (vector sd scaled before basis decomposition with dimension m).  See the documentation of \code{bassPCA} for more details.
+#' @param n.cores integer number of cores (threads) to use
+#' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param ... arguements to be passed to \code{bass} function calls.
 #' @details Under a user defined basis decomposition, fits a bass model to each PCA basis coefficient independently, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.  The basis does not need to be orthogonal, but independent modeling of basis coefficients should be sensible.
 #' @return An object of class 'bassBasis' with two elements:
@@ -118,12 +119,23 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 #' @import stats
 #' @import utils
 #' @example inst/examplesPCA.R
-bassBasis<-function(dat,n.cores=1,...){
+bassBasis<-function(dat,n.cores=1,parType='fork',...){
+
 
   require(parallel)
-  cl <- makeCluster(n.cores)
-  mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
-  stopCluster(cl)
+  if(n.cores>detectCores())
+    warning(paste0("Specified n.cores = ",n.cores,'. Proceeding with n.cores = min(n.cores,dat$n.pc,detectCores()) = ',min(n.cores,dat$n.pc,detectCores())))
+  n.cores<-min(n.cores,dat$n.pc,detectCores())
+
+  if(n.cores==1){
+    mod.list<-lapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+  } else if(parType=='socket'){
+    cl <- makeCluster(n.cores)
+    mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+    stopCluster(cl)
+  } else if(parType=='fork'){
+    mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule = F)
+  }
 
   ret<-list(mod.list=mod.list,dat=dat)
   class(ret)<-'bassBasis'
@@ -164,8 +176,12 @@ bassBasis<-function(dat,n.cores=1,...){
 #' @examples
 #' # See examples in bass documentation.
 #'
-predict.bassBasis<-function(object,newdata,mcmc.use,trunc.error=FALSE,n.cores=1,parType="fork",...){
+predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,n.cores=1,parType="fork",...){
   require(parallel)
+
+  if(is.null(mcmc.use)){ # if null, use all
+    mcmc.use<-1:((object$mod.list[[1]]$nmcmc-object$mod.list[[1]]$nburn)/object$mod.list[[1]]$thin)
+  }
 
   if(n.cores==1){
     # no parallel
@@ -194,7 +210,7 @@ predict.bassBasis<-function(object,newdata,mcmc.use,trunc.error=FALSE,n.cores=1,
   }
 
 
-  out<-aperm(out,c(3,2,1)) # + sample of truncation error
+  out<-aperm(out,c(3,2,1))
 
   if(trunc.error)
     out<-out+array(truncErrSampN(length(mcmc.use)*nrow(newdata),object$dat$trunc.error),dim=c(length(mcmc.use),nrow(newdata),length(object$dat$y.m)))
@@ -263,10 +279,10 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @description Decomposes the variance of the BASS model into variance due to main effects, two way interactions, and so on, similar to the ANOVA decomposition for linear models.  Uses the Sobol' decomposition, which can be done analytically for MARS models.
 #' @param mod output from the \code{bassBasis} or \code{bassPCA} function.
 #' @param int.order an integer indicating the highest order of interactions to include in the Sobol decomposition.
-#' @param prior a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  If unspecified, a uniform is assumed with the same bounds as are represented in the input to xx.
-#' @param mcmc.use an integer vector indexing which MCMC iterations to use for sensitivity analysis.
+#' @param prior a list with the same number of elements as there are inputs to mod.  Each element specifies the prior for the particular input.  Each prior is specified as a list with elements \code{dist} (one of \code{c("normal", "student", "uniform")}), \code{trunc} (a vector of dimension 2 indicating the lower and upper truncation bounds, taken to be the data bounds if omitted), and for "normal" or "student" priors, \code{mean} (scalar mean of the Normal/Student, or a vector of means for a mixture of Normals or Students), \code{sd} (scalar standard deviation of the Normal/Student, or a vector of standard deviations for a mixture of Normals or Students), \code{df} (scalar degrees of freedom of the Student, or a vector of degrees of freedom for a mixture of Students), and \code{weights} (a vector of weights that sum to one for the mixture components, or the scalar 1).  If unspecified, a uniform is assumed with the same bounds as are represented in the input to mod.
+#' @param mcmc.use an integer indicating which MCMC iteration to use for sensitivity analysis. Defaults to the last iteration.
 #' @param nind number of Sobol indices to keep (will keep the largest nind).
-#' @param ncores number of cores to use (nearly linear speedup for adding cores).
+#' @param n.cores number of cores to use (nearly linear speedup for adding cores).
 #' @param preschedule to be passed to mclapply.
 #' @param plot logical; whether to plot results.
 #' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
@@ -279,14 +295,15 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #'  \item{names.ind}{a vector of names of the main effects and interactions used.}
 #'
 #' @keywords Sobol decomposition
-#' @seealso \link{bass} for model fitting and \link{predict.bass} for prediction.
+#' @seealso \link{bassPCA} and \link{bassBasis} for model fitting and \link{predict.bassBasis} for prediction.
 #' @export
 #' @examples
 #' # See examples in bass documentation.
 
-sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,preschedule=F,plot=F){
+sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,preschedule=F,plot=F){
 
-
+  if(is.null(mcmc.use))
+    mcmc.use<-length(mod$mod.list[[1]]$s2)
 
 
   bassMod<-mod$mod.list[[1]] # for structuring everything, assuming that model structures are the same for different PCs
@@ -398,6 +415,11 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,pres
 
   cat('Start',timestamp(quiet = T),'\n')
   p<-pc.mod[[1]]$p
+  if(int.order>p){
+    int.order<-p
+    warning("int.order > number of inputs, changing to int.order = number of inputs")
+  }
+
   u.list<-lapply(1:int.order,function(i) combn(1:p,i))
   ncombs.vec<-unlist(lapply(u.list,ncol))
   ncombs<-sum(ncombs.vec)
@@ -455,11 +477,11 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=1,nind=NULL,ncores=1,pres
   cat('Integrating',timestamp(quiet = T),'\n')
 
   u.list.temp<-c(list(1:p),u.list1)
-  ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=ncores,mc.preschedule = preschedule)
+  ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
   V.tot<-ints1.temp[[1]]
   ints1<-ints1.temp[-1]
 
-  #ints1<-mclapply(u.list1,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=ncores,mc.preschedule = preschedule)
+  #ints1<-mclapply(u.list1,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
   ints<-list()
   ints[[1]]<-do.call(cbind,ints1[1:ncol(u.list[[1]])])
   if(int.order>1){
