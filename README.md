@@ -1,4 +1,4 @@
-BASS [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+BASS
 ================
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -11,7 +11,7 @@ To install the development version, use
 devtools::install_github("lanl/BASS")
 ```
 
-Examples of uses are in Francom et al. (2018) and Francom et al. (2019) and explicit code examples are given in the R package vignette
+Examples of uses are in Francom et al. (2018) and Francom et al. (2019) and explicit code examples are given in the [R package vignette](https://cran.r-project.org/web/packages/BASS/vignettes/article2-vignette.pdf).
 
 References
 ==========
