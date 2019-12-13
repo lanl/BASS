@@ -10,7 +10,9 @@ Authors@R: c(person("Devin", "Francom", role = c("aut", "cre"), email = "devinfr
               person("Bruno", "Sanso", role = "ths"),
               person("Agner", "Fog", role = c("ctb","cph")))
 License: GPL-3
-Suggests: R.rsp
+Suggests: 
+    R.rsp,
+    testthat (>= 2.1.0)
 VignetteBuilder: R.rsp
 Imports: truncdist
 RoxygenNote: 6.1.1
