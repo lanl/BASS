@@ -5,7 +5,8 @@
 \title{BASS Sensitivity Analysis}
 \usage{
 sobolBasis(mod, int.order, prior = NULL, mcmc.use = NULL,
-  nind = NULL, n.cores = 1, preschedule = F, plot = F)
+  nind = NULL, n.cores = 1, preschedule = F, plot = F,
+  verbose = T)
 }
 \arguments{
 \item{mod}{output from the \code{bassBasis} or \code{bassPCA} function.}
@@ -23,6 +24,8 @@ sobolBasis(mod, int.order, prior = NULL, mcmc.use = NULL,
 \item{preschedule}{to be passed to mclapply.}
 
 \item{plot}{logical; whether to plot results.}
+
+\item{verbose}{logical; print progress.}
 }
 \value{
 If non-functional (\code{func.var = NULL}), a list with two elements:
