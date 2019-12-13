@@ -122,19 +122,18 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 bassBasis<-function(dat,n.cores=1,parType='fork',...){
 
 
-  require(parallel)
-  if(n.cores>detectCores())
-    warning(paste0("Specified n.cores = ",n.cores,'. Proceeding with n.cores = min(n.cores,dat$n.pc,detectCores()) = ',min(n.cores,dat$n.pc,detectCores())))
-  n.cores<-min(n.cores,dat$n.pc,detectCores())
+  if(n.cores>parallel::detectCores())
+    warning(paste0("Specified n.cores = ",n.cores,'. Proceeding with n.cores = min(n.cores,dat$n.pc,detectCores()) = ',min(n.cores,dat$n.pc,parallel::detectCores())))
+  n.cores<-min(n.cores,dat$n.pc,parallel::detectCores())
 
   if(n.cores==1){
     mod.list<-lapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
   } else if(parType=='socket'){
-    cl <- makeCluster(n.cores)
-    mod.list<-parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
-    stopCluster(cl)
+    cl <- parallel::makeCluster(n.cores)
+    mod.list<-parallel::parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
+    parallel::stopCluster(cl)
   } else if(parType=='fork'){
-    mod.list<-mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule = F)
+    mod.list<-parallel::mclapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...),mc.cores = n.cores,mc.preschedule = F)
   }
 
   ret<-list(mod.list=mod.list,dat=dat)
@@ -178,7 +177,6 @@ bassBasis<-function(dat,n.cores=1,parType='fork',...){
 #' # See examples in bass documentation.
 #'
 predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,nugget=T,n.cores=1,parType="fork",...){
-  require(parallel)
 
   if(is.null(mcmc.use)){ # if null, use all
     mcmc.use<-1:((object$mod.list[[1]]$nmcmc-object$mod.list[[1]]$nburn)/object$mod.list[[1]]$thin)
@@ -194,20 +192,20 @@ predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,nugge
 
     # parLapply (socket)
 
-    cl <- makeCluster(min(n.cores,object$dat$n.pc,detectCores())) # possibly a faster way to do this, but would need to keep cluster around
-    clusterExport(cl,varlist=c("newdata"),envir=environment())
+    cl <- parallel::makeCluster(min(n.cores,object$dat$n.pc,parallel::detectCores())) # possibly a faster way to do this, but would need to keep cluster around
+    parallel::clusterExport(cl,varlist=c("newdata"),envir=environment())
 
-    newy.pred<-array(unlist(parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+    newy.pred<-array(unlist(parallel::parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
 
-    out<-array(unlist(parLapply(cl,1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+    out<-array(unlist(parallel::parLapply(cl,1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
 
-    stopCluster(cl)
+    parallel::stopCluster(cl)
   } else if(parType=='fork'){
     # mclapply (fork - faster than socket, but not compatible with windows)
-    newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...),mc.cores=n.cores)),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+    newy.pred<-array(unlist(parallel::mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...),mc.cores=n.cores)),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
-    out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat),mc.cores=n.cores)),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+    out<-array(unlist(parallel::mclapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat),mc.cores=n.cores)),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
   }
 
 
@@ -233,10 +231,9 @@ predict1mod<-function(mod,newdata,mcmc.use,nugget,...){
 }
 
 predict_fast.bassBasis<-function(object,newdata,n.cores=1,mcmc.use,trunc.error=FALSE,...){
-  require(parallel)
-  newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod_fast(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+  newy.pred<-array(unlist(parallel::mclapply(1:object$dat$n.pc,function(i) predict1mod_fast(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=min(n.cores,object$dat$n.pc))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
-  out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(newy.pred[i,,],object$dat),mc.cores=min(n.cores,length(mcmc.use)))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
+  out<-array(unlist(parallel::mclapply(1:length(mcmc.use),function(i) predict1mcmc(newy.pred[i,,],object$dat),mc.cores=min(n.cores,length(mcmc.use)))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
 
   out<-aperm(out,c(3,2,1))
 
@@ -476,13 +473,13 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
   u.list1<-list()
   for(i in 1:int.order)
     u.list1<-c(u.list1,split(u.list[[i]], col(u.list[[i]])))
-  require(parallel)
+  #require(parallel)
   #browser()
   if(verbose)
     cat('Integrating',timestamp(quiet = T),'\n')
 
   u.list.temp<-c(list(1:p),u.list1)
-  ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
+  ints1.temp<-parallel::mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
   V.tot<-ints1.temp[[1]]
   ints1<-ints1.temp[-1]
 
@@ -971,9 +968,9 @@ sample.prior<-function(prior,n){
     comp<-sample(1:ncomp,size=n,prob=prior[[i]]$weights,replace=T)
     if(prior[[i]]$dist=='normal')
       #out[,i]<-rnorm(n,prior[[i]]$mean[comp],prior[[i]]$sd[comp])
-      out[,i]<-suppressWarnings(rtrunc(n,spec='norm',a=(prior[[i]]$trunc[1]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp],b=(prior[[i]]$trunc[2]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp])*prior[[i]]$sd[comp]+prior[[i]]$mean[comp])
+      out[,i]<-suppressWarnings(truncdist::rtrunc(n,spec='norm',a=(prior[[i]]$trunc[1]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp],b=(prior[[i]]$trunc[2]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp])*prior[[i]]$sd[comp]+prior[[i]]$mean[comp])
     if(prior[[i]]$dist=='student')
-      out[,i]<-rtrunc(n,spec='t',df=prior[[i]]$df[comp],a=(prior[[i]]$trunc[1]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp],b=(prior[[i]]$trunc[2]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp])*prior[[i]]$sd[comp]+prior[[i]]$mean[comp]
+      out[,i]<-truncdist::rtrunc(n,spec='t',df=prior[[i]]$df[comp],a=(prior[[i]]$trunc[1]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp],b=(prior[[i]]$trunc[2]-prior[[i]]$mean[comp])/prior[[i]]$sd[comp])*prior[[i]]$sd[comp]+prior[[i]]$mean[comp]
     }
   }
   out

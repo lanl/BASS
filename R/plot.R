@@ -116,7 +116,7 @@ plot.bassBasis<-function(x,quants=c(.025,.975),pred=T,...){
 #' @examples
 #' # See examples in bass documentation.
 #'
-plot.bassSob<-function(x,var.names=NULL,...){
+plot.bassSob<-function(x,...){
   op<-par(no.readonly=T)
   par(mfrow=c(1,2),xpd=T)
   if(x$func){

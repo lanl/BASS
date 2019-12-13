@@ -42,6 +42,7 @@ X<-cbind(rep(xfunc,each=n),kronecker(rep(1,nfunc),x)) # to get y
 y<-matrix(f(X),nrow=n)+rnorm(n*nfunc,0,sigma)
 
 ## fit BASS
+library(parallel)
 mod<-bassPCA(x,y,n.pc=5,n.cores=min(5,parallel::detectCores()))
 plot(mod$mod.list[[1]])
 plot(mod$mod.list[[2]])
@@ -63,7 +64,8 @@ matplot(t(ypred),type='l') # actual
 matplot(t(apply(pred,2:3,mean)),type='l') # mean prediction
 
 ## sensitivity
-sens<-sobolOB(mod,int.order = 2,ncores = max(parallel::detectCores()-2,1),mcmc.use=1000) # for speed, only use a few samples
+sens<-sobolBasis(mod,int.order = 2,ncores = max(parallel::detectCores()-2,1),
+                 mcmc.use=1000) # for speed, only use a few samples
 plot(sens)
 }
 

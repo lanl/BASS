@@ -26,6 +26,6 @@ To install the development version, use
 devtools::install_github("lanl/BASS")
 ```
 
-Examples of uses are in @francom2018sensitivity and @francom2019inferring and explicit code examples are given in the R package vignette
+Examples of uses are in @francom2018sensitivity and @francom2019inferring and explicit code examples are given in the [R package vignette](https://cran.r-project.org/web/packages/BASS/vignettes/article2-vignette.pdf).
 
 # References

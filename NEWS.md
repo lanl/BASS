@@ -1,5 +1,8 @@
 # BASS 1.1.2
-- added support for categorical variables
+- added unit tests for prediction and Sobol decomposition for various validated models
+- added ability to write models to JSON, and read models from JSON
+- various options added to existing functions
+- existing function bassOB renamed to bassBasis
 
 # BASS 1.1.1
 - added non-uniform prior support for continuous variables in Sobol decomposition
