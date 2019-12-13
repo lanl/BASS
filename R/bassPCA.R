@@ -166,6 +166,7 @@ bassBasis<-function(dat,n.cores=1,parType='fork',...){
 #' @param newdata a matrix of new input values at which to predict.  The columns should correspond to the same variables used in the \code{bassBasis} or \code{bassPCA}  functions.
 #' @param mcmc.use a vector indexing which MCMC iterations to use for prediction.
 #' @param trunc.error logical, use basis truncation error when predicting?
+#' @param nugget logical, use individual \code{bass} nugget variances when predicting?
 #' @param n.cores number of cores, though 1 is often the fastest.
 #' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param ... further arguments passed to or from other methods.
@@ -176,7 +177,7 @@ bassBasis<-function(dat,n.cores=1,parType='fork',...){
 #' @examples
 #' # See examples in bass documentation.
 #'
-predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,n.cores=1,parType="fork",...){
+predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,nugget=T,n.cores=1,parType="fork",...){
   require(parallel)
 
   if(is.null(mcmc.use)){ # if null, use all
@@ -185,7 +186,7 @@ predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,n.cor
 
   if(n.cores==1){
     # no parallel
-    newy.pred<-array(unlist(lapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+    newy.pred<-array(unlist(lapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
     #browser()
     out<-array(unlist(lapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
@@ -196,7 +197,7 @@ predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,n.cor
     cl <- makeCluster(min(n.cores,object$dat$n.pc,detectCores())) # possibly a faster way to do this, but would need to keep cluster around
     clusterExport(cl,varlist=c("newdata"),envir=environment())
 
-    newy.pred<-array(unlist(parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+    newy.pred<-array(unlist(parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
 
     out<-array(unlist(parLapply(cl,1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat))),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
@@ -204,7 +205,7 @@ predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,n.cor
     stopCluster(cl)
   } else if(parType=='fork'){
     # mclapply (fork - faster than socket, but not compatible with windows)
-    newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,...),mc.cores=n.cores)),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
+    newy.pred<-array(unlist(mclapply(1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...),mc.cores=n.cores)),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
 
     out<-array(unlist(mclapply(1:length(mcmc.use),function(i) predict1mcmc(matrix(newy.pred[i,,],ncol=object$dat$n.pc,nrow=nrow(newdata)),object$dat),mc.cores=n.cores)),dim=c(length(object$dat$y.m),nrow(newdata),length(mcmc.use)))
   }
@@ -224,9 +225,10 @@ predict1mcmc<-function(mat,dat){
   dat$basis%*%t(mat)*dat$y.s + dat$y.m
 }
 
-predict1mod<-function(mod,newdata,mcmc.use,...){
+predict1mod<-function(mod,newdata,mcmc.use,nugget,...){
   pmat<-predict(mod,newdata,mcmc.use=mcmc.use,...)
-  pmat<-pmat+rnorm(length(mcmc.use),0,sqrt(mod$s2[mcmc.use]))
+  if(nugget)
+    pmat<-pmat+rnorm(length(mcmc.use),0,sqrt(mod$s2[mcmc.use]))
   pmat
 }
 
@@ -285,6 +287,7 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @param n.cores number of cores to use (nearly linear speedup for adding cores).
 #' @param preschedule to be passed to mclapply.
 #' @param plot logical; whether to plot results.
+#' @param verbose logical; print progress.
 #' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
 #' @return If non-functional (\code{func.var = NULL}), a list with two elements:
 #'  \item{S}{a data frame of sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular main effect or interaction.  The values are the proportion of variance in the model that is due to each main effect or interaction.}
@@ -300,7 +303,7 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @examples
 #' # See examples in bass documentation.
 
-sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,preschedule=F,plot=F){
+sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,preschedule=F,plot=F,verbose=T){
 
   if(is.null(mcmc.use))
     mcmc.use<-length(mod$mod.list[[1]]$s2)
@@ -413,7 +416,8 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
   pc.mod<-mod$mod.list
   pcs<-mod$dat$basis
 
-  cat('Start',timestamp(quiet = T),'\n')
+  if(verbose)
+    cat('Start',timestamp(quiet = T),'\n')
   p<-pc.mod[[1]]$p
   if(int.order>p){
     int.order<-p
@@ -474,7 +478,8 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
     u.list1<-c(u.list1,split(u.list[[i]], col(u.list[[i]])))
   require(parallel)
   #browser()
-  cat('Integrating',timestamp(quiet = T),'\n')
+  if(verbose)
+    cat('Integrating',timestamp(quiet = T),'\n')
 
   u.list.temp<-c(list(1:p),u.list1)
   ints1.temp<-mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
@@ -504,7 +509,8 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
   # plot(V.tot)
   # points(apply(sens.func$S.var[1,,],2,sum),col=2)
 
-  cat('Shuffling',timestamp(quiet = T),'\n')
+  if(verbose)
+    cat('Shuffling',timestamp(quiet = T),'\n')
   if(length(u.list)>1){
     for(i in 2:length(u.list)){
       sob[[i]]<-matrix(nrow=nxfunc,ncol=ncol(ints[[i]]))
@@ -570,7 +576,8 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
   names.ind<-c(unlist(lapply(u.list,function(x) apply(x,2,paste,collapse='x',sep=''))),'other')
   names.ind<-names.ind[use]
 
-  cat('Finish',timestamp(quiet = T),'\n')
+  if(verbose)
+    cat('Finish',timestamp(quiet = T),'\n')
 
   #browser()
 

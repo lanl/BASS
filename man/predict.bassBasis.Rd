@@ -5,7 +5,8 @@
 \title{BASS Prediction}
 \usage{
 \method{predict}{bassBasis}(object, newdata, mcmc.use = NULL,
-  trunc.error = FALSE, n.cores = 1, parType = "fork", ...)
+  trunc.error = FALSE, nugget = T, n.cores = 1, parType = "fork",
+  ...)
 }
 \arguments{
 \item{object}{a fitted model, output from the \code{bass} function.}
@@ -15,6 +16,8 @@
 \item{mcmc.use}{a vector indexing which MCMC iterations to use for prediction.}
 
 \item{trunc.error}{logical, use basis truncation error when predicting?}
+
+\item{nugget}{logical, use individual \code{bass} nugget variances when predicting?}
 
 \item{n.cores}{number of cores, though 1 is often the fastest.}
 
