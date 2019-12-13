@@ -1,5 +1,5 @@
 ###############################################################
-## f5: Ishigami function ("Nonparametric variance-based methods of assessing uncertainty importance"), legendre polynomials - continuous and categorical variables
+## f5: Ishigami function, continuous variables (https://www.sfu.ca/~ssurjano/ishigami.html)
 ###############################################################
 library(BASS)
 
