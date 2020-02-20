@@ -71,7 +71,7 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
   }
 
   if(class(scale)=='logical' & length(scale)==1){
-    y.s<-apply(y,2,scale)
+    y.s<-apply(y,2,sd)
     if(!scale)
       y.s<-rep(1,ncol(y))
   } else if(class(scale)=='numeric' & length(scale)==ncol(y)){

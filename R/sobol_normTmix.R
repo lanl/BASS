@@ -859,14 +859,47 @@ intabq1.student<-function(prior,a,b,t,q){
     # out<-out+prior$weights[k]*(tnorm.mean.zk - t*zk)
     # in parens should match integrate(function(x){(x-t)*dnorm(x,prior$mean[k],prior$sd[k])},lower=a,upper=b)
     #int<-prior$mean[k]+prior$sd[k]*integrate(function(x) (x-t)*dt(x,prior$df[k]),lower=(a-prior$mean[k])/prior$sd[k],upper=(b-prior$mean[k])/prior$sd[k])$value
-    int<-integrate(function(x) (x-t)*dt((x-prior$mean[k])/prior$sd[k],prior$df[k])/prior$sd[k],lower=a,upper=b)$value
+
+
+
+    zk<-pt((b-prior$mean[k])/prior$sd[k],prior$df[k]) - pt((a-prior$mean[k])/prior$sd[k],prior$df[k])
+    # ast<-(a-prior$mean[k])/prior$sd[k]
+    # bst<-(b-prior$mean[k])/prior$sd[k]
+    # dnb<-dt(bst)/prior$sd[k]
+    # dna<-dt(ast)/prior$sd[k]
+    # tnorm.mean.zk<-prior$mean[k]*zk - prior$sd[k]*(dnb - dna)
+    # out<-out+prior$weights[k]*(tnorm.mean.zk - t*zk)
+
+    #int<-integrate(function(x) (x-t)*dt((x-prior$mean[k])/prior$sd[k],prior$df[k])/prior$sd[k],lower=a,upper=b)$value
+    #browser()
+    int<-intx1Student(b,prior$mean[k],prior$sd[k],prior$df[k],t) - intx1Student(a,prior$mean[k],prior$sd[k],prior$df[k],t)
     #integrate(function(x) (x-t)*dt.scaled(x,prior$df[k],prior$mean[k],prior$sd[k]),lower=a,upper=b)
-    out<-out+prior$weights[k]*int
+    out<-out+prior$weights[k]*int ## TODO: handle truncation, mixture...~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~v
   }
-  browser()
+  #browser()
   out
 }
 
+intx1Student<-function(x,m,s,v,t){
+  #browser()
+  # a<-1/2
+  # b<-(1 + v)/2
+  # c<-3/2
+  # xx<- -(m - x)^2/(s^2 *v)
+  # f21<-gsl::hyperg_2F1(a,c-b,c,1-1/(1-xx))/(1-xx)^a # instead of hyperg_2F1(a,b,c,x)
+  # if(is.nan(f21))
+  #   f21<-gsl::hyperg_2F1(a,b,c,xx)
+  temp<-(s^2*v)/(m^2 + s^2*v - 2*m*x + x^2)
+  -((v/(v + (m - x)^2/s^2))^(v/2) *
+      sqrt(temp) *
+      sqrt(1/temp) *
+      (s^2*v* (sqrt(1/temp) -
+                 (1/temp)^(v/2)) +
+         (t-m)*(-1 + v)*(-m + x) *
+         (1/temp)^(v/2) *
+         robust2f1(1/2,(1 + v)/2,3/2,-(m - x)^2/(s^2 *v)) )) /
+    (s *(-1 + v)* sqrt(v) *beta(v/2, 1/2))
+}
 
 
 C1<-function(k,m,tl,tq=F){ #k is variable, m is basis function # deals with sign & truncation
@@ -944,11 +977,36 @@ intabq2.student<-function(prior,a,b,t1,t2,q){
   out<-0
   for(k in 1:length(prior$weights)){
     #int<-prior$mean[k]+prior$sd[k]*integrate(function(x) (x-t1)*(x-t2)*dt(x,prior$df[k]),lower=(a-prior$mean[k])/prior$sd[k],upper=(b-prior$mean[k])/prior$sd[k])$value
-    int<-integrate(function(x) (x-t1)*(x-t2)*dt((x-prior$mean[k])/prior$sd[k],prior$df[k])/prior$sd[k],lower=a,upper=b)$value
+
+   # browser()
+    #int<-integrate(function(x) (x-t1)*(x-t2)*dt((x-prior$mean[k])/prior$sd[k],prior$df[k])/prior$sd[k],lower=a,upper=b)$value
+    int<-intx2Student(b,prior$mean[k],prior$sd[k],prior$df[k],t1,t2) - intx2Student(a,prior$mean[k],prior$sd[k],prior$df[k],t1,t2)
     out<-out+prior$weights[k]*int
   }
   out
 }
+robust2f1<-function(a,b,c,x){
+  if(abs(x)<1)
+    return(gsl::hyperg_2F1(a,b,c,x))
+  return(gsl::hyperg_2F1(a,c-b,c,1-1/(1-x))/(1-x)^a)
+}
+intx2Student<-function(x,m,s,v,t1,t2){
+  #x=b;m=prior$mean[k];s=prior$sd[k];v=prior$df[k]
+  temp<-(s^2*v)/(m^2 + s^2*v - 2*m*x + x^2)
+  ((v/(v + (m - x)^2/s^2))^(v/2) *
+      sqrt(temp) *
+      sqrt(1/temp) *
+      (-3*(-t1-t2+2*m)*s^2*v* (sqrt(1/temp) -
+                 (1/temp)^(v/2)) +
+         3*(-t1+m)*(-t2+m)*(-1 + v)*(-m + x) *
+         (1/temp)^(v/2) *
+         robust2f1(1/2,(1 + v)/2,3/2,-(m - x)^2/(s^2 *v)) +
+         (-1+v)*(-m+x)^3*(1/temp)^(v/2) *
+         robust2f1(3/2,(1 + v)/2,5/2,-(m - x)^2/(s^2 *v)) )) /
+    (3*s *(-1 + v)* sqrt(v) *beta(v/2, 1/2))
+}
+
+
 ## integral of two pieces of tensor that have same variable - deals with sign, truncation
 C2<-function(k,m,n,tl){ # k is variable, n & m are basis indices
   #browser()
