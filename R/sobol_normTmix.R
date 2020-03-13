@@ -104,7 +104,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
 
       prior[[i]]$trunc<-scale.range(prior[[i]]$trunc,bassMod$range.des[,i])
       if(prior[[i]]$trunc[1]<0 | prior[[i]]$trunc[2]>1)
-        stop('truncation range larger than training range...it is unwise to ask an emulator to extrapolate.')
+        warning('truncation range larger than training range...it is unwise to ask an emulator to extrapolate.')
       #browser()
 
       if(prior[[i]]$dist %in% c('normal','student')){
