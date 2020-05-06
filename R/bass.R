@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## main BASS function
 ########################################################################
@@ -39,7 +46,6 @@
 #' @keywords nonparametric regression, splines, functional data analysis
 #' @seealso \link{predict.bass} for prediction and \link{sobol} for sensitivity analysis.
 #' @export
-#' @useDynLib BASS, .registration = TRUE
 #' @import stats
 #' @import utils
 #' @example inst/examples.R
@@ -49,9 +55,9 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   cl<-match.call()
   ########################################################################
   ## setup
-  
+
   ## check inputs
-  
+
   if(!posInt(maxInt))
     stop('invalud maxInt')
   if(!posInt(maxInt.func))
@@ -88,11 +94,11 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     stop('h1,h2,a.tau,b.tau,w1,w2 must be greater than 0')
   if(s2.lower<0)
     stop('s2.lower must be >= 0')
-  
+
   ## process data
   if(any(is.na(xx)) | any(is.na(y)))
     stop('Current version does not allow missing data')
-  
+
   y<-as.matrix(y)
   xx<-as.data.frame(xx)
   dx<-dim(xx)
@@ -135,7 +141,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     if(dx[1]==dxf[1]) # this is dangerous because we would automatically correct it if we could tell it was wrong, but can't tell if it is wrong here
       warning('Possible dimension problem: make sure rows of y correspond to functional data')
   }
-  
+
   des<-T
   cx<-sapply(xx,class)
   cx.factor<- cx == 'factor'
@@ -170,7 +176,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   # so cases are des, cat, des_cat, des_func, cat_func, des_cat_func
 
   ## handle tempering arguements
-  
+
   if(is.null(temp.ladder)){
     temp.ladder<-1
   }
@@ -242,8 +248,8 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   data$birth.prob.last<-1/3
   data$death.prob<-1/3
   data$itemp.ladder<-1/temp.ladder
-  
-  
+
+
   ## make a prior object
 
   npart.des<-npart
@@ -253,7 +259,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   if(is.null(npart.func) & func){
     npart.func<-min(20,.1*data$nfunc)
   }
-  
+
   maxBasis<-min(maxBasis,data$n) # can't have more basis functions than data points
   maxInt.des<-min(maxInt,pdes) # can't have more interactions than variables
   maxInt.cat<-min(maxInt.cat,pcat)
@@ -284,9 +290,9 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     prior$minInt<-1
   prior$miC<-abs(prior$minInt-1)
 
-  
+
   ## make an object to store current MCMC state (one for each temperature)
-  
+
   if(is.null(curr.list)){
     curr.list<-list()
     for(i in 1:ntemps){
@@ -362,10 +368,10 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   funcs$death<-eval(parse(text=paste('death',type,sep='')))
   funcs$change<-eval(parse(text=paste('change',type,sep='')))
   funcs$getYhat<-eval(parse(text=paste('getYhat',type,sep='')))
-  
-  
+
+
   ## prepare storage objects for mcmc draws
-  
+
   nmod.max<-(nmcmc-nburn)/thin # max number of models (models don't necessarily change every iteration)
   if(des){
     signs.des<-knotInd.des<-vars.des<-array(dim=c(nmod.max,maxBasis,maxInt.des)) # truncate when returning at end of function
@@ -405,22 +411,22 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   ########################################################################
   ## MCMC
 
-  
+
   if(verbose)
     cat('MCMC Start',myTimestamp(),'nbasis:',curr.list[[cold.chain]]$nbasis,'\n')
   n.models<-keep.sample<-0 # indexes for storage
   for(i in 2:nmcmc){
 
     ## update model for each temperature - can be parallel
-    
+
     curr.list<-lapply(curr.list,updateMCMC,prior=prior,data=data,funcs=funcs)
     #curr.list<-parLapply(cluster,curr.list,updateMCMC)
     #curr.list<-parallel::mclapply(curr.list,updateMCMC,prior=prior,data=data,funcs=funcs,mc.preschedule=T,mc.cores=1)
     #curr.list<-parLapplyLB(cl,curr.list,updateMCMC,prior=prior,data=data,funcs=funcs)
     # TODO: DO SOMETHING LIKE THIS BUT KEEP EVERYTHING SEPARATE ON THE CLUSTER, all we need is lpost, cmod - MPI
-    
+
     ## parallel tempering swap
-    
+
     if(i>start.temper){# & (i%%20==0)){ #only start after a certain point, and only try every 20
       # sample temp.ind.swap from 1:(ntemps-1), then swap with temp.ind.swap+1
       temp.ind.swap1<-sample(1:(ntemps-1),size=1) # corresponds to temperature temp.ladder[temp.ind.swap1]
@@ -554,8 +560,8 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     out$curr.list<-curr.list # for restarting
   }
   mb<-max(nbasis)
-  
-  
+
+
   out.des<-list()
   if(des){
     out.des<-list(
