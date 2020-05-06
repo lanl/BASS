@@ -1,3 +1,0 @@
-# Makevars for BiasedUrn
-# The value of MAXCOLORS may be modified
-PKG_CPPFLAGS= -DR_BUILD=1 -DMAXCOLORS=10000
