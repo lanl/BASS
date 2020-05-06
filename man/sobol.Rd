@@ -4,8 +4,16 @@
 \alias{sobol}
 \title{BASS Sensitivity Analysis}
 \usage{
-sobol(bassMod, prior = NULL, prior.func = NULL, mcmc.use = NULL,
-  func.var = NULL, xx.func.var = NULL, verbose = TRUE)
+sobol(
+  bassMod,
+  prior = NULL,
+  prior.func = NULL,
+  mcmc.use = NULL,
+  func.var = NULL,
+  xx.func.var = NULL,
+  verbose = TRUE,
+  getEffects = FALSE
+)
 }
 \arguments{
 \item{bassMod}{a fitted model output from the \code{bass} function.}
@@ -21,6 +29,8 @@ sobol(bassMod, prior = NULL, prior.func = NULL, mcmc.use = NULL,
 \item{xx.func.var}{grid for functional variable specified by \code{func.var}.  Disregard if \code{func.var} is not specified.  If \code{func.var} is specified and \code{xx.func.var} not specified, the grid used to fit \code{bass} will be used.}
 
 \item{verbose}{logical; should progress be displayed?}
+
+\item{getEffects}{logical; should Sobols ANOVA decomposition be computed?}
 }
 \value{
 If non-functional (\code{func.var = NULL}), a list with two elements:

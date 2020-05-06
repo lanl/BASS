@@ -4,9 +4,18 @@
 \alias{bassPCA}
 \title{Bayesian Adaptive Spline Surfaces (BASS) with PCA decomposition of response}
 \usage{
-bassPCA(xx = NULL, y = NULL, dat = NULL, n.pc = NULL,
-  perc.var = 99, n.cores = 1, parType = "fork", center = T,
-  scale = F, ...)
+bassPCA(
+  xx = NULL,
+  y = NULL,
+  dat = NULL,
+  n.pc = NULL,
+  perc.var = 99,
+  n.cores = 1,
+  parType = "fork",
+  center = T,
+  scale = F,
+  ...
+)
 }
 \arguments{
 \item{xx}{a data frame or matrix of predictors with dimension n x p.  Categorical predictors should be included as factors.}

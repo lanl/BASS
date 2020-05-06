@@ -4,13 +4,37 @@
 \alias{bass}
 \title{Bayesian Adaptive Spline Surfaces (BASS)}
 \usage{
-bass(xx, y, maxInt = 3, maxInt.func = 3, maxInt.cat = 3,
-  xx.func = NULL, degree = 1, maxBasis = 1000, npart = NULL,
-  npart.func = NULL, nmcmc = 10000, nburn = 9000, thin = 1,
-  g1 = 0, g2 = 0, s2.lower = 0, h1 = 10, h2 = 10, a.tau = 0.5,
-  b.tau = NULL, w1 = 5, w2 = 5, temp.ladder = NULL,
-  start.temper = NULL, curr.list = NULL, save.yhat = TRUE,
-  small = FALSE, verbose = TRUE, ret.str = F)
+bass(
+  xx,
+  y,
+  maxInt = 3,
+  maxInt.func = 3,
+  maxInt.cat = 3,
+  xx.func = NULL,
+  degree = 1,
+  maxBasis = 1000,
+  npart = NULL,
+  npart.func = NULL,
+  nmcmc = 10000,
+  nburn = 9000,
+  thin = 1,
+  g1 = 0,
+  g2 = 0,
+  s2.lower = 0,
+  h1 = 10,
+  h2 = 10,
+  a.tau = 0.5,
+  b.tau = NULL,
+  w1 = 5,
+  w2 = 5,
+  temp.ladder = NULL,
+  start.temper = NULL,
+  curr.list = NULL,
+  save.yhat = TRUE,
+  small = FALSE,
+  verbose = TRUE,
+  ret.str = F
+)
 }
 \arguments{
 \item{xx}{a data frame or matrix of predictors.  Categorical predictors should be included as factors.}

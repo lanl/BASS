@@ -4,9 +4,17 @@
 \alias{sobolBasis}
 \title{BASS Sensitivity Analysis}
 \usage{
-sobolBasis(mod, int.order, prior = NULL, mcmc.use = NULL,
-  nind = NULL, n.cores = 1, preschedule = F, plot = F,
-  verbose = T)
+sobolBasis(
+  mod,
+  int.order,
+  prior = NULL,
+  mcmc.use = NULL,
+  nind = NULL,
+  n.cores = 1,
+  parType = "fork",
+  plot = F,
+  verbose = T
+)
 }
 \arguments{
 \item{mod}{output from the \code{bassBasis} or \code{bassPCA} function.}
@@ -21,7 +29,7 @@ sobolBasis(mod, int.order, prior = NULL, mcmc.use = NULL,
 
 \item{n.cores}{number of cores to use (nearly linear speedup for adding cores).}
 
-\item{preschedule}{to be passed to mclapply.}
+\item{parType}{either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.}
 
 \item{plot}{logical; whether to plot results.}
 

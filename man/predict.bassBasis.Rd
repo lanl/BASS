@@ -4,9 +4,16 @@
 \alias{predict.bassBasis}
 \title{BASS Prediction}
 \usage{
-\method{predict}{bassBasis}(object, newdata, mcmc.use = NULL,
-  trunc.error = FALSE, nugget = T, n.cores = 1, parType = "fork",
-  ...)
+\method{predict}{bassBasis}(
+  object,
+  newdata,
+  mcmc.use = NULL,
+  trunc.error = FALSE,
+  nugget = T,
+  n.cores = 1,
+  parType = "fork",
+  ...
+)
 }
 \arguments{
 \item{object}{a fitted model, output from the \code{bass} function.}
