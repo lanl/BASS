@@ -1,17 +1,24 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
 birth_des_cat<-function(curr,prior,data){
-  
+
   cand.des<-genCandBasis(minInt=prior$minInt,maxInt=prior$maxInt.des,I.vec=curr$I.vec.des,z.vec=curr$z.vec.des,p=data$pdes,xxt=data$xxt.des,q=prior$q,xx.unique.ind=data$unique.ind.des,vars.len=data$vars.len.des,prior)
 
   cand.cat<-genCandBasisCat(minInt=prior$minInt,maxInt=prior$maxInt.cat,I.vec=curr$I.vec.cat,z.vec=curr$z.vec.cat,p=data$pcat,xx=data$xx.cat,nlevels=data$nlevels,levels=data$levels,prior)
-  
+
   if(cand.des$n.int + cand.cat$n.int == 0) # intercept
     return(curr)
-  
+
   dc<-cand.des$basis*cand.cat$basis
-  
+
   if(sum(dc!=0)<prior$npart.des){
     return(curr)
   }
@@ -64,7 +71,7 @@ death_des_cat<-function(curr,prior,data){
   z.star.des<-curr$z.star.des
   z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]<-z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]-1
   z.vec.des<-z.star.des/sum(z.star.des)
-  
+
   I.star.cat<-curr$I.star.cat
   I.star.cat[curr$n.int.cat[basis]+1]<-I.star.cat[curr$n.int.cat[basis]+1]-1
   I.vec.cat<-I.star.cat/sum(I.star.cat)
@@ -72,19 +79,19 @@ death_des_cat<-function(curr,prior,data){
   z.star.cat[curr$vars.cat[basis,1:curr$n.int.cat[basis]]]<-z.star.cat[curr$vars.cat[basis,1:curr$n.int.cat[basis]]]-1
   z.vec.cat<-z.star.cat/sum(z.star.cat)
 
-  
+
   lpbmcmp<-0
   if(curr$n.int.des[basis]>0){
     lpbmcmp<-lpbmcmp+logProbChangeMod(curr$n.int.des[basis],curr$vars.des[basis,1:curr$n.int.des[basis]],I.vec.des,z.vec.des,data$pdes,data$vars.len.des,prior$maxInt.des,prior$miC)
   }
-  
+
   if(curr$n.int.cat[basis]>0){#n.int,vars,I.vec,z.vec,p,nlevels,sub.size,maxInt
     lpbmcmp<-lpbmcmp+logProbChangeModCat(curr$n.int.cat[basis],curr$vars.cat[basis,1:curr$n.int.cat[basis]],I.vec.cat,z.vec.cat,data$pcat,data$nlevels,curr$sub.size[basis,],prior$maxInt.cat,prior$miC)
   }
-  
+
   #if(is.na(lpbmcmp))
     #browser()
-    
+
   # calculate log acceptance probability
   alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) - log(curr$lam) + log(data$birth.prob.last/data$death.prob) + log(curr$nbasis) + lpbmcmp - .5*log(curr$beta.prec) + .5*log(1+curr$beta.prec))
 
@@ -100,10 +107,10 @@ death_des_cat<-function(curr,prior,data){
 
 change_des_cat<-function(curr,prior,data){
   basis<-sample(1:curr$nbasis,size=1)
-  
-  
+
+
   type.change<-sample(c('des','cat'),size=1,prob=c(curr$n.int.des[basis],curr$n.int.cat[basis]))
-  
+
   if(type.change=='des'){
     int.change<-sample(1:(curr$n.int.des[basis]),size=1)
     use<-1:curr$n.int.des[basis]

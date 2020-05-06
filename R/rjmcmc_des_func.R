@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
