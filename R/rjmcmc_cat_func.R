@@ -1,10 +1,17 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
 birth_cat_func<-function(curr,prior,data){
 
   cand.cat<-genCandBasisCat(minInt=prior$minInt,maxInt=prior$maxInt.cat,I.vec=curr$I.vec.cat,z.vec=curr$z.vec.cat,p=data$pcat,xx=data$xx.cat,nlevels=data$nlevels,levels=data$levels,prior)
-  
+
   if(sum(cand.cat$basis!=0)<prior$npart.des)
       return(curr)
 
