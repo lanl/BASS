@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## generate a cadidate basis (birth, change)
 ########################################################################
@@ -68,7 +75,7 @@ genBasisChange<-function(curr,basis,int.change,xxt,q,knots,knotInd,signs,vars,xx
 genBasisChangeCat<-function(curr,basis,int.change,xx,nlevels,levels,sub.size,sub,vars){
   sub.size[int.change]<-sample(1:(nlevels[vars[int.change]]-1),size=1)
   sub[[int.change]]<-sample(levels[[vars[int.change]]],size=sub.size[int.change])
-  
+
   basis<-makeBasisCat(vars,sub,xx)
   return(list(sub.size=sub.size,sub=sub,basis=basis))
 }
@@ -135,12 +142,12 @@ addBasisCat<-function(curr,cand,qf.cand.list,prior){
   #browser()
   curr$sub.list[[curr$nbasis]]<-cand$sub #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ maybe should use a design matrix style for factors instead of this list...wouldn't need to use %in%
   curr$vars.cat<-rbind(curr$vars.cat,c(cand$vars,fill))
-  
+
   curr$I.star.cat[cand$n.int+prior$miC]<-curr$I.star.cat[cand$n.int+prior$miC]+1
   curr$I.vec.cat<-curr$I.star.cat/sum(curr$I.star.cat)
   curr$z.star.cat[cand$vars]<-curr$z.star.cat[cand$vars]+1
   curr$z.vec.cat<-curr$z.star.cat/sum(curr$z.star.cat)
-  
+
   # basis functions
   curr$cat.basis<-cbind(curr$cat.basis,cand$basis)
   return(curr)
@@ -268,19 +275,19 @@ changeBasisDC<-function(curr,cand,basis){
 
 # check monotonicity of functional output - for now only with des (no cat) and degree=1
 checkMono<-function(tdes.basis.ext,func.basis,bhat){
-  
+
   if(length(bhat)>1)
     out<-func.basis%*%diag(c(bhat))%*%tdes.basis.ext
   else
     out<-func.basis%*%bhat%*%tdes.basis.ext
-  
+
   #browser()
   min(diff(out)) >= 0
 }
 # checkMono<-function(cand.des,cand.func,curr,data){
-#   
+#
 #   basis<-makeBasis(cand.des$signs,cand.des$vars,cand.des$knots,data$ext,1)
-#   
+#
 #   tdes.basis.ext<-rbind(makeBasisMatrixCurr(curr,data),makeBasis(cand.des$signs,cand.des$vars,cand.des$knots,data$ext,1))
 #   out<-cbind(curr$func.basis,cand.func$basis)%*%diag(curr$bhat)%*%tdes.basis.ext
 #   min(apply(out,2,function(x) min(diff(x)))) < 0
@@ -290,22 +297,22 @@ checkMono2<-function(curr,data,k){
   # make des.basis.ext (n.ext x nbasis) using data$ext
   # make func.deriv (nfunc x nbasis) matrix
   # func.deriv%*%diag(beta)%*%t(des.basis.ext)
-  
+
   # shortcut: use regular func.basis, get differences
   tdes.basis.ext<-makeBasisMatrixCurr(curr,data)
-  
+
   if(length(curr$beta)>1){
-    out<-curr$func.basis%*%diag(c(curr$beta))%*%tdes.basis.ext 
+    out<-curr$func.basis%*%diag(c(curr$beta))%*%tdes.basis.ext
   } else{
     out<-curr$func.basis%*%curr$beta%*%tdes.basis.ext
   }
-  
+
   if(k>10)
     browser()
-  
+
   min(diff(out)) >= 0
-  
-  
+
+
 }
 makeBasisMatrixCurr<-function(curr,data){#i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train){
   xxt.ext<-data$ext
@@ -324,4 +331,4 @@ makeBasisMatrixCurr<-function(curr,data){#i,nbasis,vars,signs,knots.ind,q,xxt,n.
     }
   }
   return(tbasis.mat)
-} 
+}
