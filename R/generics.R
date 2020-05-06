@@ -1,80 +1,9 @@
-#' @title Write/read BASS object to JSON
-#'
-#' @description Write/read an object of class \code{bass}, \code{bassBasis}, or \code{bassSob} to a JSON file.
-#' @param x an object of class \code{bass}, \code{bassBasis}, or \code{bassSob}, returned from \code{bass}, \code{bassPCA}, \code{bassBasis}, \code{sobol}, or \code{sobolBasis}.
-#' @param file json file to write or read.
-#' @param ... further arguments passed to or from other methods.
-#' @name writeBassJSON
-#' @export
-NULL
-#' @rdname writeBassJSON
-writeBassJSON<-function(x,file,...){
-  cl<-class(x)
-
-  if(cl=='bass'){
-    class(x)<-'list'
-    class(x$call)<-'list'
-    for(i in 1:length(x$call))
-      class(x$call[[i]])<-'character'
-    jj<-jsonlite::toJSON(x,digits=NA,...)
-    jsonlite::write_json(jj,file)
-  }
-
-  if(cl=='bassSob'){
-    class(x)<-'list'
-    for(i in 1:length(x$prior))
-      class(x$prior[[i]])<-'list'
-    jj<-jsonlite::toJSON(x,digits=NA,...)
-    jsonlite::write_json(jj,file)
-  }
-
-  if(cl=='bassBasis'){
-    class(x)<-'list'
-    class(x$dat)<-'list'
-    names(x$mod.list)<-paste0('n',1:length(x$mod.list)) # may need to do something like this for tempering, as well
-    for(j in 1:length(x$mod.list)){
-      class(x$mod.list[[j]])<-'list'
-      class(x$mod.list[[j]]$call)<-'list'
-      for(i in 1:length(x$mod.list[[j]]$call))
-        class(x$mod.list[[j]]$call[[i]])<-'character'
-    }
-    jj<-jsonlite::toJSON(x,digits=NA,...)
-    jsonlite::write_json(jj,file)
-  }
-
-  #return(NULL)
-}
-#' @rdname writeBassJSON
-#' @export
-readBassJSON<-function(file){
-  jj<-jsonlite::fromJSON(file)#,simplifyDataFrame=F,simplifyVector=T,simplifyMatrix=F)
-  x<-jsonlite::fromJSON(jj)#,simplifyDataFrame=F,simplifyVector=T,simplifyMatrix=F)
-
-  if(!is.null(x$beta)){
-    class(x)<-'bass'
-    for(i in 1:length(x$call))
-      x$call[[i]]<-as.name(x$call[[i]])
-    x$call<-as.call(x$call)
-  }
-
-  if(!is.null(x$S)){
-    class(x)<-'bassSob'
-    for(i in 1:length(x$prior))
-      class(x$prior[[i]])<-x$prior[[i]]$dist
-  }
-
-  if(!is.null(x$mod.list)){
-    class(x)<-'bassBasis'
-    for(j in 1:length(x$mod.list)){
-      class(x$mod.list[[j]])<-'bass'
-      #for(i in 1:length(x$mod.list[[j]]$call))
-      #  x$mod.list[[j]]$call[[i]]<-as.name(x$mod.list[[j]]$call[[i]])
-      #x$mod.list[[j]]$call<-as.call(x$mod.list[[j]]$call)
-    }
-  }
-
-  return(x)
-}
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
 
 #' @title Print BASS Details
 #'
