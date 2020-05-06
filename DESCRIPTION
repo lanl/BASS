@@ -12,7 +12,9 @@ License: GPL-3
 Suggests: 
     knitr,
     testthat (>= 2.1.0),
-    parallel
+    parallel,
+    MASS,
+    wmtsa
 VignetteBuilder: knitr
 Imports: truncdist, gsl
 RoxygenNote: 7.1.0
