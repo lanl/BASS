@@ -1,18 +1,25 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## miscellaneous functions
 ########################################################################
 
 ## sample a tempered gamma
-rgammaTemper<-function(n,shape,rate,itemper){ 
+rgammaTemper<-function(n,shape,rate,itemper){
   rgamma(n,itemper*(shape-1)+1,itemper*rate)
 }
 ## sample a tempered IG
-rigammaTemper<-function(n,shape,scale,itemper){ 
+rigammaTemper<-function(n,shape,scale,itemper){
   1/rgamma(n,itemper*(shape+1)-1,rate=itemper*scale)
 }
 
 ## sample a truncated tempered IG
-rtigammaTemper<-function(n,shape,scale,itemper,lower){ 
+rtigammaTemper<-function(n,shape,scale,itemper,lower){
   1/rtgamma(n,1/lower,itemper*(shape+1)-1,rate=itemper*scale)
 }
 
