@@ -1,9 +1,25 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## functions used in MCMC
 ########################################################################
 
+dmwnchBass<-function(z.vec,vars){
+  alpha<-z.vec[vars]/sum(z.vec[-vars])
+  j<-length(alpha)
+  ss<-1 + (-1)^j * 1/(sum(alpha)+1)
+  for(i in 1:(j-1))
+    ss <- ss + (-1)^(i) * sum(1/(colSums(combn(alpha,i))+1))
+  ss
+}
+
 ## RJ reversibility term (and prior)
-logProbChangeMod<-function(n.int,vars,I.vec,z.vec,p,vars.len,maxInt,miC){ 
+logProbChangeMod<-function(n.int,vars,I.vec,z.vec,p,vars.len,maxInt,miC){
   if(n.int==1){ #for acceptance ratio
     out<-log(I.vec[n.int+miC])-log(2*p*vars.len[vars]) + #proposal
       log(2*p*vars.len[vars])+log(maxInt) # prior
@@ -11,11 +27,12 @@ logProbChangeMod<-function(n.int,vars,I.vec,z.vec,p,vars.len,maxInt,miC){
     # perms<-permutations(n.int,n.int,vars)
     # sum.perm<-sum(apply(perms,1,function(row){1/prod(1-cumsum(z.vec[row][-n.int]))}))
     # lprob.vars.noReplace<-sum(log(z.vec[vars]))+log(sum.perm)
-    #require(BiasedUrn) # this is much faster than above (esp for large maxInt)
+    #require(BiasedUrn)
     x<-rep(0,p)
     x[vars]<-1
     #lprob.vars.noReplace<-log(BiasedUrn::dMWNCHypergeo(x,rep(1,p),n.int,z.vec)) - do this in combination with imports: BiasedUrn in DESCRIPTION file, but that has a limit to MAXCOLORS
-    lprob.vars.noReplace<-log(dMWNCHypergeo(x,rep(1,p),n.int,z.vec))
+    #lprob.vars.noReplace<-log(dMWNCHypergeo(x,rep(1,p),n.int,z.vec)) #BiasedUrn version
+    lprob.vars.noReplace<-log(dmwnchBass(z.vec,vars))
     out<-log(I.vec[n.int+miC])+lprob.vars.noReplace-n.int*log(2)-sum(log(vars.len[vars])) + # proposal
       +n.int*log(2)+sum(log(vars.len[vars]))+lchoose(p,n.int)+log(maxInt) # prior
   }
@@ -43,7 +60,7 @@ logProbChangeModCat<-function(n.int,vars,I.vec,z.vec,p,nlevels,sub.size,maxInt,m
 
 
 ## log posterior
-lp<-function(curr,prior,data){ 
+lp<-function(curr,prior,data){
   tt<-(
     - (curr$s2.rate+prior$g2)/curr$s2
     -(data$n/2+1+(curr$nbasis+1)/2 +prior$g1)*log(curr$s2) # changed -g1 to +g1
@@ -81,13 +98,13 @@ lp<-function(curr,prior,data){
       - curr$nbasis*log(prior$maxInt.func)
     )
   }
-  
+
   return(tt)
 }
 
 
 ## get quadratic form that shows up in RJ acceptance probability
-getQf<-function(XtX,Xty){ 
+getQf<-function(XtX,Xty){
   R<-tryCatch(chol(XtX), error=function(e) matrix(F))
   if(R[1,1]){
     dr<-diag(R)
