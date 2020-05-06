@@ -1,3 +1,11 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+# Full copyright in the README.md in the repository
+#######################################################
+
 ############################################################
 ## get Sobol decomposition
 ############################################################
@@ -12,6 +20,7 @@
 #' @param func.var an integer indicating which functional variable to make sensitivity indices a function of.  Disregard if \code{bassMod} is non-functional or if scalar sensitivity indices are desired.
 #' @param xx.func.var grid for functional variable specified by \code{func.var}.  Disregard if \code{func.var} is not specified.  If \code{func.var} is specified and \code{xx.func.var} not specified, the grid used to fit \code{bass} will be used.
 #' @param verbose logical; should progress be displayed?
+#' @param getEffects logical; should Sobols ANOVA decomposition be computed?
 #' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
 #' @return If non-functional (\code{func.var = NULL}), a list with two elements:
 #'  \item{S}{a data frame of sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular main effect or interaction.  The values are the proportion of variance in the model that is due to each main effect or interaction.}
@@ -24,11 +33,12 @@
 #'
 #' @keywords Sobol decomposition
 #' @seealso \link{bass} for model fitting and \link{predict.bass} for prediction.
+#' @import gsl
 #' @export
 #' @examples
 #' # See examples in bass documentation.
 #'
-sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,xx.func.var=NULL,verbose=TRUE){
+sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,xx.func.var=NULL,verbose=TRUE,getEffects=FALSE){
   if(class(bassMod)!='bass')
     stop('First input needs to be a bass object')
   if(bassMod$p==1 & !bassMod$func)
@@ -181,6 +191,13 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
 
   #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  if(getEffects){
+    if(bassMod$cat | bassMod$func){
+      getEffects<-F
+      warning('getEffects not yet implemented for functional response or categorical inputs.')
+    }
+  }
+
   if(is.null(func.var)){
     func<-F
   } else{
@@ -207,7 +224,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
     }
     return(sobol_des_func(bassMod=bassMod,mcmc.use=mcmc.use,verbose=verbose,func.var=func.var,xx.func.var=xx.func.var,prior=prior,prior.cat=prior.cat))
   } else{
-    return(sobol_des(bassMod=bassMod,mcmc.use=mcmc.use,verbose=verbose,prior=prior,prior.cat=prior.cat)) # applies to both des & func as long as functional sobol indices are not desired
+    return(sobol_des(bassMod=bassMod,mcmc.use=mcmc.use,verbose=verbose,prior=prior,prior.cat=prior.cat,getEffects=getEffects)) # applies to both des & func as long as functional sobol indices are not desired
   }
 }
 
@@ -218,7 +235,7 @@ sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,x
 
 ## get sobol indices - no functional
 
-sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
+sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
   models<-bassMod$model.lookup[mcmc.use] # only do the heavy lifting once for each model
   uniq.models<-unique(models)
   nmodels<-length(uniq.models)
@@ -229,6 +246,8 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   pcat<-sum(bassMod$pcat)
   pfunc<-sum(bassMod$pfunc)
   p<-pdes+pcat+pfunc
+
+
 
   #prior<-c(prior,prior.func)
 
@@ -243,6 +262,16 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   ################################################
   sob<-array(0,dim=c(length(mcmc.use),sum(num.ind)))
   var.tot.store<-f0.store<-rep(0,length(mcmc.use))
+
+  ngrid<-100
+  xx=seq(0,1,length.out=ngrid) # make a different size xx for each variable...to debug
+  xxt<-t(seq(0,1,length.out=ngrid))
+  effects<-list()
+  if(getEffects){
+    for(iint in 1:min(length(combs),2)){
+      effects[[iint]]<-array(dim=c(length(mcmc.use),ncol(combs[[iint]]),rep(ngrid,iint)))
+    } # do above somewhere
+  }
 
   if(verbose)
     cat('Sobol Start',myTimestamp(),'Models:',length(unique(models)),'\n')
@@ -349,7 +378,82 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
       #browser()
       C1.temp<-(1/(tl$q+1)*((tl$s+1)/2-tl$s*tl$t))*tl$s^2
       C1.temp[C1.temp==0]<-1
-      f0.store[mod.ind]<-bassMod$beta[mcmc.use.mod[1],1]+sum(tl$a[1,]*apply(C1.temp,1,prod)) # this was just for debugging something else
+
+      f0.store[mcmc.use.mod]<-bassMod$beta[mcmc.use.mod,1]+bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod))
+      #browser()
+
+
+      main.effects<-T
+      # if(length(combs[[1]])==0)
+      #   main.effects<-F
+
+      two.ints<-F
+      if(length(combs)>1)
+        two.ints<-T
+
+      if(getEffects){
+##################################################################
+      # main effects
+
+        if(main.effects){
+        for(ef in 1:ncol(combs[[1]])){
+          effects[[1]][mcmc.use.mod,ef,]<- -bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod))
+          for(m in 1:tl$M){
+            pp.use<-combs[[1]][,ef]
+            if(tl$s[m,pp.use]!=0){
+              effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+tcrossprod(bassMod$beta[mcmc.use.mod,m+1],makeBasis(tl$s[m,pp.use],1,tl$t[m,pp.use],xxt,1)*prod(C1.temp[m,-pp.use]))
+            } else{
+              effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+bassMod$beta[mcmc.use.mod,m+1]*prod(C1.temp[m,])
+            }
+          }
+          #matplot(t(effects[[1]][1,,]),type='l')
+          #matplot(cbind(10*sin(pi*xx)^2/(pi*xx) - a1, 10*sin(pi*xx)^2/(pi*xx) - a1, 20*(xx-.5)^2 - 5/3, 10*xx - 5, 5*xx-5/2),type='l')
+          #matplot(t(effects[[1]][,1,]),type='l')
+        }
+
+        }
+
+        if(two.ints){
+        ## 2-way interactions
+        for(ef in 1:ncol(combs[[2]])){
+          effects[[2]][mcmc.use.mod,ef,,]<- -bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod))
+
+          pp.use<-combs[[2]][,ef]
+          pp.use1<-which(combs[[1]]%in%combs[[2]][1,ef])
+          pp.use2<-which(combs[[1]]%in%combs[[2]][2,ef])
+
+            effects[[2]][mcmc.use.mod,ef,,]<- sweep(effects[[2]][mcmc.use.mod,ef,,,drop=F], c(1,2,3), effects[[1]][mcmc.use.mod,pp.use1,,drop=F])
+
+            effects[[2]][mcmc.use.mod,ef,,]<- sweep(effects[[2]][mcmc.use.mod,ef,,,drop=F], c(1,2,4), effects[[1]][mcmc.use.mod,pp.use2,,drop=F])
+
+            #image.plot(effects[[2]][mcmc.use.mod[1],ef,,])
+
+
+          for(m in 1:tl$M){
+
+              b1<-makeBasis(tl$s[m,pp.use[1]],1,tl$t[m,pp.use[1]],xxt,1)
+              b2<-makeBasis(tl$s[m,pp.use[2]],1,tl$t[m,pp.use[2]],xxt,1)
+              if(all(b1==0))
+                b1=b1+1
+              if(all(b2==0))
+                b2=b2+1
+
+              effects[[2]][mcmc.use.mod,ef,,]<-effects[[2]][mcmc.use.mod,ef,,] + drop(bassMod$beta[mcmc.use.mod,m+1]%o%(tcrossprod(b1,b2)*prod(C1.temp[m,-pp.use])))
+
+            }
+          }
+
+        #image.plot(effects[[2]][1,1,,])
+        #image.plot(matrix(10*sin(2*pi*xx2[,1]*xx2[,2]),ncol=100))
+
+        #xx2<-expand.grid(t(xxt),t(xxt))
+        #a1<--5/pi*sum( (-4*pi^2)^(1:50)/((2*(1:50))*factorial(2*(1:50))) )
+        #image.plot(matrix(10*sin(2*pi*xx2[,1]*xx2[,2]) - 10*sin(pi*xx2[,1])^2/(pi*xx2[,1]) - 10*sin(pi*xx2[,2])^2/(pi*xx2[,2]) + a1,nrow=100))
+
+        }
+        }
+          ##################################################################
+
 
       if(verbose & mod.count%%10==0)
         cat('Sobol',myTimestamp(),'Model:',mod.count,'\n')
@@ -384,7 +488,7 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat){
   if(any(sob<0))
     browser()
 
-  ret<-list(S=sob,T=tot,func=F,var.tot=var.tot.store,f0=f0.store,ints=tl$integrals,prior=prior)
+  ret<-list(S=sob,T=tot,func=F,var.tot=var.tot.store,f0=f0.store,ints=tl$integrals,prior=prior,effects=effects,names.ind=names.ind)
   class(ret)<-'bassSob'
 
   return(ret)
@@ -677,6 +781,9 @@ get_tl<-function(bassMod,mcmc.use.mod,M,mod,p,q,cs.num.ind,combs,func.var=NULL,x
   tl<-list(s=s,t=t,q=q,a=a,M=M,Kind=Kind,cs.num.ind=cs.num.ind,combs=combs,xx=xx.func.var,pfunc=sum(bassMod$pfunc),cat=bassMod$cat,pdes=sum(bassMod$pdes)) #temporary list
   return(tl)
 }
+
+
+
 
 ## process model information into a temporary list - categorical part
 add_tlCat<-function(tl,bassMod,mcmc.use.mod,mod){
