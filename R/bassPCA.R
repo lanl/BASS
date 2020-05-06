@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## main BASS function
 ########################################################################
@@ -23,8 +30,6 @@
 #' @keywords nonparametric regression, splines, functional data analysis
 #' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
-#' @useDynLib BASS, .registration = TRUE
-#' @import stats
 #' @import utils
 #' @example inst/examplesPCA.R
 #'
@@ -115,7 +120,6 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 #' @keywords nonparametric regression, splines, functional data analysis
 #' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
-#' @useDynLib BASS, .registration = TRUE
 #' @import stats
 #' @import utils
 #' @example inst/examplesPCA.R
@@ -129,7 +133,7 @@ bassBasis<-function(dat,n.cores=1,parType='fork',...){
   if(n.cores==1){
     mod.list<-lapply(1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
   } else if(parType=='socket'){
-    cl <- parallel::makeCluster(n.cores)
+    cl <- parallel::makeCluster(n.cores,setup_strategy = "sequential")
     mod.list<-parallel::parLapply(cl,1:dat$n.pc,function(i) bass(dat$xx,dat$newy[i,],...))
     parallel::stopCluster(cl)
   } else if(parType=='fork'){
@@ -192,7 +196,7 @@ predict.bassBasis<-function(object,newdata,mcmc.use=NULL,trunc.error=FALSE,nugge
 
     # parLapply (socket)
 
-    cl <- parallel::makeCluster(min(n.cores,object$dat$n.pc,parallel::detectCores())) # possibly a faster way to do this, but would need to keep cluster around
+    cl <- parallel::makeCluster(min(n.cores,object$dat$n.pc,parallel::detectCores()),setup_strategy = "sequential") # possibly a faster way to do this, but would need to keep cluster around
     parallel::clusterExport(cl,varlist=c("newdata"),envir=environment())
 
     newy.pred<-array(unlist(parallel::parLapply(cl,1:object$dat$n.pc,function(i) predict1mod(object$mod.list[[i]],newdata,mcmc.use,nugget,...))),dim=c(length(mcmc.use),nrow(newdata),object$dat$n.pc))
@@ -282,7 +286,7 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @param mcmc.use an integer indicating which MCMC iteration to use for sensitivity analysis. Defaults to the last iteration.
 #' @param nind number of Sobol indices to keep (will keep the largest nind).
 #' @param n.cores number of cores to use (nearly linear speedup for adding cores).
-#' @param preschedule to be passed to mclapply.
+#' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param plot logical; whether to plot results.
 #' @param verbose logical; print progress.
 #' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
@@ -300,7 +304,7 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @examples
 #' # See examples in bass documentation.
 
-sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,preschedule=F,plot=F,verbose=T){
+sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,parType='fork',plot=F,verbose=T){
 
   if(is.null(mcmc.use))
     mcmc.use<-length(mod$mod.list[[1]]$s2)
@@ -479,7 +483,32 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
     cat('Integrating',timestamp(quiet = T),'\n')
 
   u.list.temp<-c(list(1:p),u.list1)
-  ints1.temp<-parallel::mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = preschedule)
+
+
+
+
+
+  if(n.cores==1){
+    # no parallel
+    ints1.temp<-lapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array))
+  } else if(parType=='socket'){
+
+    # parLapply (socket)
+
+    cl <- parallel::makeCluster(min(n.cores,parallel::detectCores()),setup_strategy = "sequential") # possibly a faster way to do this, but would need to keep cluster around
+    parallel::clusterExport(cl,varlist=c("prior","x","pc.mod","pcs","mcmc.use","f0r2","C1Basis.array"),envir=environment())
+
+    ints1.temp<-parallel::parLapply(cl,u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array))
+
+    parallel::stopCluster(cl)
+  } else if(parType=='fork'){
+    # mclapply (fork - faster than socket, but not compatible with windows)
+    ints1.temp<-parallel::mclapply(u.list.temp,function(x) func.hat(prior,x,pc.mod,pcs,mcmc.use,f0r2,C1Basis.array),mc.cores=n.cores,mc.preschedule = F)
+  }
+
+
+
+
   V.tot<-ints1.temp[[1]]
   ints1<-ints1.temp[-1]
 
@@ -824,7 +853,9 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
 ##################################################################################################################################################################
 ##################################################################################################################################################################
 ## modularized calibration
-
+rmnorm<-function(mu, S){
+  mu+c(rnorm(length(mu))%*%chol(S))
+}
 calibrate.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
   p<-ncol(mod$dat$xx)
   ny<-length(y)
@@ -850,7 +881,7 @@ calibrate.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mo
       mi<-1#max(1,i-300)
       S<-cov(theta[mi:(i-1),])*cc+diag(eps*cc,p)
     }
-    theta.cand<-mnormt::rmnorm(1,mean=theta[i-1,],varcov=S)
+    theta.cand<-rmnorm(theta[i-1,],S)
     if(any(theta.cand<0 | theta.cand>1))
       alpha<- -9999
     else{
