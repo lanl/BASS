@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ########################################################################
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
@@ -23,7 +30,7 @@ birth_des<-function(curr,prior,data){
     return(curr)
   }
 
-  
+
   ## calculate log acceptance probability
   alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) + log(curr$lam) - log(curr$nc) + log(data$death.prob.next/data$birth.prob) - cand.des$lbmcmp + .5*log(curr$beta.prec) - .5*log(1+curr$beta.prec))
   #cat(- cand.des$lbmcmp,' ')
