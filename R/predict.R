@@ -1,3 +1,10 @@
+#######################################################
+# Author: Devin Francom, Los Alamos National Laboratory
+# Protected under GPL-3 license
+# Los Alamos Computer Code release C19031
+# github.com/lanl/BASS
+#######################################################
+
 ###############################################################
 ## predict methods
 ###############################################################
@@ -37,7 +44,7 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
     newdata.func<-t(1) # placeholder
   }
   tnewdata.func<-t(newdata.func)
-  
+
   dx<-dim(newdata)
   if(is.null(dx)){
     newdata<-data.frame(newdata)
@@ -55,10 +62,10 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
   cx.factor<- cx == 'factor'
   if(!all(cx==object$cx))
     stop('number/order of columns of newdata does not match number/order of inputs used to train object')
-  
+
   newdata.des<-newdata[,!cx.factor,drop=F]
   newdata.cat<-newdata[,cx.factor,drop=F]
-  
+
   if(ncol(newdata.des)>0){
     for(i in 1:ncol(newdata.des)){
       newdata.des[,i]<-scale.range(newdata.des[,i],object$range.des[,i])
@@ -68,12 +75,12 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
   out<-array(dim=c(length(mcmc.use),nrow(newdata),nrow(newdata.func)))
   k<-0
   models<-object$model.lookup[mcmc.use]
-  
+
   if(verbose)
     cat('Predict Start',myTimestamp(),'Models:',length(unique(models)),'\n')
-  
+
   func<-eval(parse(text=paste('mult',object$type,sep='')))
-  
+
   mod.ind<-0
   for(j in unique(models)){ # loop though models, could be parallel?
     mod.ind<-mod.ind+1
@@ -81,7 +88,7 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
     ind<-k+(1:length(mcmc.use.j)) # index for storage
     k<-k+length(ind) # used for start of index
     out[ind,,]<-func(model=j,mcmc.use.mod=mcmc.use.j,object=object,tnewdata.des=tnewdata.des,newdata.cat=newdata.cat,tnewdata.func=tnewdata.func)
-    
+
     if(verbose & mod.ind%%100==0)
       cat('Predict',myTimestamp(),'Model:',mod.ind,'\n')
   }
@@ -109,7 +116,7 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
     newdata.func<-t(1) # placeholder
   }
   tnewdata.func<-t(newdata.func)
-  
+
   dx<-dim(newdata)
   if(is.null(dx)){
     newdata<-data.frame(newdata)
@@ -127,10 +134,10 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
   cx.factor<- cx == 'factor'
   if(!all(cx==object$cx))
     stop('number/order of columns of newdata does not match number/order of inputs used to train object')
-  
+
   newdata.des<-newdata[,!cx.factor,drop=F]
   newdata.cat<-newdata[,cx.factor,drop=F]
-  
+
   #if(ncol(newdata.des)>0){
   #  for(i in 1:ncol(newdata.des)){
   #    newdata.des[,i]<-scale.range(newdata.des[,i],object$range.des[,i])
@@ -140,12 +147,12 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
   out<-array(dim=c(length(mcmc.use),nrow(newdata),nrow(newdata.func)))
   k<-0
   models<-object$model.lookup[mcmc.use]
-  
+
   if(verbose)
     cat('Predict Start',myTimestamp(),'Models:',length(unique(models)),'\n')
-  
+
   func<-mult_des#eval(parse(text=paste('mult',object$type,sep='')))
-  
+
   mod.ind<-0
   for(j in unique(models)){ # loop though models, could be parallel?
     mod.ind<-mod.ind+1
@@ -153,7 +160,7 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
     ind<-k+(1:length(mcmc.use.j)) # index for storage
     k<-k+length(ind) # used for start of index
     out[ind,,]<-func(model=j,mcmc.use.mod=mcmc.use.j,object=object,tnewdata.des=tnewdata.des,newdata.cat=newdata.cat,tnewdata.func=tnewdata.func)
-    
+
     if(verbose & mod.ind%%100==0)
       cat('Predict',myTimestamp(),'Model:',mod.ind,'\n')
   }
@@ -179,7 +186,7 @@ makeBasisMatrix<-function(i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train){
     }
   }
   return(tbasis.mat)
-} 
+}
 
 ## make basis functions for model i - categorical portion
 makeBasisMatrixCat<-function(i,nbasis,vars,xx,n.int,sub){
