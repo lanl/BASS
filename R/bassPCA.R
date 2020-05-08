@@ -27,7 +27,7 @@
 #' @return An object of class 'bassBasis' with two elements:
 #'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
 #'   \item{dat}{same as dat above}
-#' @keywords nonparametric regression, splines, functional data analysis
+#' @keywords nonparametric regression splines functional data analysis
 #' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
 #' @import utils
@@ -117,7 +117,7 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 #' @return An object of class 'bassBasis' with two elements:
 #'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
 #'   \item{dat}{same as dat above}
-#' @keywords nonparametric regression, splines, functional data analysis
+#' @keywords nonparametric regression splines functional data analysis
 #' @seealso \link{predict.bassBasis} for prediction and \link{sobolBasis} for sensitivity analysis.
 #' @export
 #' @import stats

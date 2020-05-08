@@ -1,3 +1,8 @@
+# BASS 1.2.0
+- Sobol getEffects option added
+- changed how Wallenius' noncentral hypergeometric density is calculated (in R rather than C++ from BiasedUrn)
+- various bug fixes
+
 # BASS 1.1.2
 - added unit tests for prediction and Sobol decomposition for various validated models
 - added ability to write models to JSON, and read models from JSON

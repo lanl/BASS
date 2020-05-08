@@ -79,5 +79,5 @@ mod<-bassPCA(1:10,matrix(1:20,10),n.pc=2,nmcmc=2,nburn=1)
 \keyword{data}
 \keyword{functional}
 \keyword{nonparametric}
-\keyword{regression,}
-\keyword{splines,}
+\keyword{regression}
+\keyword{splines}
