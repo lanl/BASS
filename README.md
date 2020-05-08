@@ -1,6 +1,11 @@
 BASS
 ================
 
+[![License: GPL
+v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![](https://img.shields.io/badge/devel%20version-1.1.2-blue.svg)](https://github.com/lanl/BASS)
+[![](https://www.r-pkg.org/badges/version/BASS?color=orange)](https://cran.r-project.org/package=BASS)
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 BASS is an R package for fitting Bayesian Adaptive Spline Surface models
