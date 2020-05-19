@@ -1,4 +1,7 @@
 # BASS 1.2.0
+- change dependency from gsl to hypergeo so that the user does not need gsl
+
+# BASS 1.2.0
 - Sobol getEffects option added
 - changed how Wallenius' noncentral hypergeometric density is calculated (in R rather than C++ from BiasedUrn)
 - various bug fixes

@@ -33,7 +33,7 @@
 #'
 #' @keywords Sobol decomposition
 #' @seealso \link{bass} for model fitting and \link{predict.bass} for prediction.
-#' @import gsl
+#' @import hypergeo
 #' @export
 #' @examples
 #' # See examples in bass documentation.
@@ -1092,10 +1092,15 @@ intabq2.student<-function(prior,a,b,t1,t2,q){
   }
   out
 }
+# robust2f1<-function(a,b,c,x){
+#   if(abs(x)<1)
+#     return(gsl::hyperg_2F1(a,b,c,x))
+#   return(gsl::hyperg_2F1(a,c-b,c,1-1/(1-x))/(1-x)^a)
+# }
 robust2f1<-function(a,b,c,x){
   if(abs(x)<1)
-    return(gsl::hyperg_2F1(a,b,c,x))
-  return(gsl::hyperg_2F1(a,c-b,c,1-1/(1-x))/(1-x)^a)
+    return(hypergeo::f15.3.8(a,b,c,x))
+  return(hypergeo::f15.3.8(a,c-b,c,1-1/(1-x))/(1-x)^a)
 }
 intx2Student<-function(x,m,s,v,t1,t2){
   #x=b;m=prior$mean[k];s=prior$sd[k];v=prior$df[k]

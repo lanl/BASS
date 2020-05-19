@@ -1,5 +1,5 @@
 Package: BASS
-Version: 1.2.0
+Version: 1.2.1
 Date: 2020-05-06
 Title: Bayesian Adaptive Spline Surfaces
 Description: Bayesian fitting and sensitivity analysis methods for adaptive
@@ -17,6 +17,6 @@ Suggests:
     wmtsa,
     formatR
 VignetteBuilder: knitr
-Imports: truncdist, gsl
+Imports: truncdist, hypergeo
 RoxygenNote: 7.1.0
 Encoding: UTF-8
