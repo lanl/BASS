@@ -1,0 +1,18 @@
+bibentry(bibtype = "Article",
+  title        = "{BASS}: An {R} Package for Fitting and Performing Sensitivity Analysis of {B}ayesian Adaptive Spline Surfaces",
+  author       = c(person(given = "Devin",
+                          family = "Francom",
+                          email = "dfrancom@lanl.gov"),
+                   person(given = "Bruno",
+                          family = "Sans\\'{o}")),
+  journal      = "Journal of Statistical Software",
+  year         = "2020",
+  volume       = "94",
+  number       = "8",
+  pages        = "1--36",
+  doi          = "10.18637/jss.v094.i08",
+
+  header       = "To cite BASS in publications use:"
+
+)
+

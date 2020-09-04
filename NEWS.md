@@ -1,4 +1,8 @@
-# BASS 1.2.0
+# BASS 1.2.1
+- remove dependency on depricated wtmsa package and remove wavelet example
+- add reference to JSS paper
+
+# BASS 1.2.1
 - change dependency from gsl to hypergeo so that the user does not need gsl
 
 # BASS 1.2.0
