@@ -17,6 +17,7 @@
 #' @param newdata.func a matrix of new values of the functional variable.  If none, the same values will be used as in the training data.
 #' @param mcmc.use a vector indexing which MCMC iterations to use for prediction.
 #' @param verbose logical; should progress be displayed?
+#' @param nugget logical; should predictions include error? If FALSE, predictions will be for mean.
 #' @param ... further arguments passed to or from other methods.
 #' @details Efficiently predicts when two MCMC iterations have the same basis functions (but different weights).
 #' @return If model output is a scalar, this returns a matrix with the same number of rows as \code{newdata} and columns corresponding to the the MCMC iterations \code{mcmc.use}.  These are samples from the posterior predictive distribution.  If model output is functional, this returns an array with first dimension corresponding to MCMC iteration, second dimension corresponding to the rows of \code{newdata}, and third dimension corresponding to the rows of \code{newdata.func}.
@@ -25,7 +26,7 @@
 #' @examples
 #' # See examples in bass documentation.
 #'
-predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FALSE,...){
+predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FALSE,nugget=FALSE,...){
   if(is.null(mcmc.use)){ # if null, use all
     mcmc.use<-1:((object$nmcmc-object$nburn)/object$thin)
   }
@@ -92,6 +93,10 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
     if(verbose & mod.ind%%100==0)
       cat('Predict',myTimestamp(),'Model:',mod.ind,'\n')
   }
+
+  if(nugget)
+    return(drop(out)+rnorm(n=prod(dim(out)),sd=sqrt(object$s2[mcmc.use])))
+
   return(drop(out))
 }
 
@@ -188,6 +193,32 @@ makeBasisMatrix<-function(i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train){
   return(tbasis.mat)
 }
 
+# trying to speed up prediction for large number of basis functions: vectorizing like this doesn't help
+# makeBasis_vec<-Vectorize(makeBasis,c('signs','vars','knots'))
+#
+# makeBasisMatrix<-function(i,nbasis,vars,signs,knots.ind,q,xxt,n.int,xx.train){
+#   n<-ncol(xxt)
+#   tbasis.mat<-matrix(nrow=nbasis+1,ncol=n)
+#   tbasis.mat[1,]<-1
+#   signs.list<-knots.list<-vars.list<-list()
+#   if(nbasis>0){
+#     for(m in 1:nbasis){
+#       if(n.int[i,m]==0){
+#         tbasis.mat[m+1,]<-1
+#       } else{
+#         use<-1:n.int[i,m]
+#         knots.list[[m]]<-xx.train[cbind(knots.ind[i,m,use],vars[i,m,use])] # get knots from knots.ind
+#         signs.list[[m]]<-signs[i,m,use]
+#         vars.list[[m]]<-vars[i,m,use]
+#         #tbasis.mat[m+1,]<-makeBasis(signs[i,m,use],vars[i,m,use],knots,xxt,q)
+#       }
+#     }
+#     #browser()
+#     tbasis.mat<-t(cbind(1,makeBasis_vec(signs.list,vars.list,knots.list,xxt,q)))
+#   }
+#   return(tbasis.mat)
+# }
+
 ## make basis functions for model i - categorical portion
 makeBasisMatrixCat<-function(i,nbasis,vars,xx,n.int,sub){
   n<-nrow(xx)
@@ -207,6 +238,7 @@ makeBasisMatrixCat<-function(i,nbasis,vars,xx,n.int,sub){
 ## do multiplication to get yhat under the different scenarios
 mult_des<-function(model,mcmc.use.mod,object,tnewdata.des,newdata.cat,tnewdata.func){
   M<-object$nbasis[mcmc.use.mod[1]]
+  #browser()
   tmat.des<-makeBasisMatrix(model,M,object$vars,object$signs,object$knotInd,object$degree,tnewdata.des,object$n.int,object$xx.des)
   out<-object$beta[mcmc.use.mod,1:(M+1),drop=F]%*%tmat.des
   return(out)

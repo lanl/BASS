@@ -10,6 +10,7 @@
   newdata.func = NULL,
   mcmc.use = NULL,
   verbose = FALSE,
+  nugget = FALSE,
   ...
 )
 }
@@ -23,6 +24,8 @@
 \item{mcmc.use}{a vector indexing which MCMC iterations to use for prediction.}
 
 \item{verbose}{logical; should progress be displayed?}
+
+\item{nugget}{logical; should predictions include error? If FALSE, predictions will be for mean.}
 
 \item{...}{further arguments passed to or from other methods.}
 }
