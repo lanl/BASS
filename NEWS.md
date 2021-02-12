@@ -1,4 +1,7 @@
-# BASS 1.2.1
+# BASS 1.2.3
+- add nugget option to predict.bass
+
+# BASS 1.2.2
 - remove dependency on depricated wtmsa package and remove wavelet example
 - add reference to JSS paper
 
