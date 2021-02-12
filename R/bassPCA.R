@@ -367,6 +367,7 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
       if(is.null(prior[[i]]$trunc)){
         prior[[i]]$trunc<-c(0,1)
       } else{
+        #browser()
         prior[[i]]$trunc<-scale.range(prior[[i]]$trunc,bassMod$range.des[,i])
       }
 
@@ -856,44 +857,105 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
 rmnorm<-function(mu, S){
   mu+c(rnorm(length(mu))%*%chol(S))
 }
-calibrate.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
+calibrate.bassBasis<-function(mod,y,a,b,nmcmc,tl=1,verbose=T){ # assumes inputs to mod are standardized to (0,1), equal variance for all y values (should change to sim covariance)
   p<-ncol(mod$dat$xx)
   ny<-length(y)
   ns<-mod$mod.list[[1]]$nmcmc-mod$mod.list[[1]]$nburn # number of emu mcmc samples
+  ntemps<-length(tl)
 
-  theta<-matrix(nrow=nmcmc,ncol=p)
-  s2<-rep(NA,nmcmc)
+  theta<-array(dim=c(nmcmc,ntemps,p))
+  s2<-matrix(nrow=nmcmc,ncol=ntemps)
+  #temp.ind<-matrix(nrow=nmcmc,ncol=ntemps)
 
-#browser()
-  theta[1,]<-.5
-  pred.curr<-predict(mod,theta[1,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
-  s2[1]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
+  #theta<-array(dim=c(nmcmc,p))
+  #s2<-rep(NA,nmcmc)
+  itl<-1/tl
+
+
+  theta[1,,]<-runif(prod(dim(theta[1,,])))
+  pred.curr<-predict(mod,theta[1,,],mcmc.use=sample(ns,size=1),trunc.error=F,nugget = T)[1,,]
+  s2[1,]<-1/rgammaTemper(ntemps,ny/2+a,b+ colSums((t(pred.curr)-y)^2), itl)
+
+
 
   eps<-1e-10
-  cc<-2.4^2/p
-  S<-diag(p)*eps
-  count<-0
+  cc<-2.4^2/p/10
+  S<-mu<-cov<-list()
+  for(t in 1:ntemps)
+    S[[t]]<-diag(p)*1e-6
+  count<-matrix(0,nrow=ntemps,ncol=ntemps)
+
+
   for(i in 2:nmcmc){
-    s2[i]<-1/rgamma(1,ny/2+a,b+sum((y-pred.curr)^2))
 
-    theta[i,]<-theta[i-1,]
+    theta[i,,]<-theta[i-1,,]
+
+    if(i==300){
+      for(t in 1:ntemps){
+        mu[[t]]<-colMeans(theta[1:(i-1),t,])
+        cov[[t]]<-cov(theta[1:(i-1),t,])
+        S[[t]]<-cov(theta[1:(i-1),t,])*cc+diag(eps*cc,p)
+      }
+    }
     if(i>300){
-      mi<-1#max(1,i-300)
-      S<-cov(theta[mi:(i-1),])*cc+diag(eps*cc,p)
+      for(t in 1:ntemps){
+        mu[[t]]<-mu[[t]]+(theta[(i-1),t,]-mu[[t]])/(i-1)
+        cov[[t]]<-(i-2)/(i-1)*cov[[t]] + (i-2)/(i-1)^2*outer(theta[(i-1),t,]-mu[[t]],theta[(i-1),t,]-mu[[t]])
+        S[[t]]<-cov[[t]]*cc+diag(eps*cc,p)
+      }
     }
-    theta.cand<-rmnorm(theta[i-1,],S)
-    if(any(theta.cand<0 | theta.cand>1))
-      alpha<- -9999
-    else{
-      pred.cand<-predict(mod,t(theta.cand),mcmc.use=sample(ns,size=1),trunc.error=F)
-      alpha<- -.5/s2[i]*(sum((y-pred.cand)^2)-sum((y-pred.curr)^2))
-    }
-    if(log(runif(1))<alpha){
-      theta[i,]<-theta.cand
-      count<-count+1
+    theta.cand<-matrix(nrow=ntemps,ncol=p)
+    for(t in 1:ntemps)
+      theta.cand[t,]<-rmnorm(theta[i-1,t,],S[[t]])
+
+    pred.cand<-predict(mod,theta.cand,mcmc.use=sample(ns,size=1),trunc.error=F,nugget=T)[1,,]
+    for(t in 1:ntemps){
+      if(any(theta.cand[t,]<0 | theta.cand[t,]>1))
+        alpha<- -9999
+      else{
+        #browser()
+        alpha<- -.5/s2[i-1,t]*itl[t]*(sum((y-pred.cand[t,])^2)-sum((y-pred.curr[t,])^2))
+      }
+      if(log(runif(1))<alpha){
+        theta[i,t,]<-theta.cand[t,]
+        count[t,t]<-count[t,t]+1
+        pred.curr<-pred.cand
+      }
     }
 
-    pred.curr<-predict(mod,theta[i,,drop=F],mcmc.use=sample(ns,size=1),trunc.error=F)
+    s2[i,]<-1/rgammaTemper(ntemps,ny/2+a, b+colSums((t(pred.curr)-y)^2), itl)
+
+    #pred.curr<-predict(mod,theta[i,,],mcmc.use=sample(ns,size=1),trunc.error=F,nugget=T)[1,,]
+
+    if(i>1000 & ntemps>1){
+      sw<-sort(sample(ntemps,size=2))
+
+      alpha<-(itl[sw[2]]-itl[sw[1]])*(
+        -ny/2*log(s2[i,sw[1]]) - .5/s2[i,sw[1]]*sum((y-pred.curr[sw[1],])^2) -(a+1)*log(s2[i,sw[1]])-b/s2[i,sw[1]]
+        +ny/2*log(s2[i,sw[2]]) + .5/s2[i,sw[2]]*sum((y-pred.curr[sw[2],])^2) +(a+1)*log(s2[i,sw[2]])+b/s2[i,sw[2]]
+         #- .5/s2[i,sw[2]]*sum((y-pred.curr[sw[2],])^2)
+         #+ .5/s2[i,sw[1]]*sum((y-pred.curr[sw[1],])^2)
+      )
+
+      if(log(runif(1))<alpha){
+        #if(s2[i,sw[1]]/s2[i,sw[2]]<.5 & sw[1]==1)
+        #  browser()
+
+        temp<-theta[i,sw[1],]
+        theta[i,sw[1],]<-theta[i,sw[2],]
+        theta[i,sw[2],]<-temp
+        temp<-s2[i,sw[1]]
+        s2[i,sw[1]]<-s2[i,sw[2]]
+        s2[i,sw[2]]<-temp
+        #temp<-sort(temp.ind[i,sw[1]])
+        #temp.ind[i,sw[1]]<-temp.ind[i,sw[2]]
+        #temp.ind[i,sw[2]]<-temp
+        count[sw[1],sw[2]]<-count[sw[1],sw[2]]+1
+      }
+    }
+
+    pred.curr<-predict(mod,theta[i,,],mcmc.use=sample(ns,size=1),trunc.error=F,nugget=T)[1,,]
+
 
     if(verbose & i%%100==0){
       pr<-c('MCMC iteration',i,myTimestamp(),'count:',count)
@@ -901,6 +963,118 @@ calibrate.bassBasis<-function(mod,y,a,b,nmcmc,verbose=T){ # assumes inputs to mo
     }
   }
 
+  return(list(theta=theta,s2=s2,count=count))
+}
+
+
+calibrate.bass<-function(mod,y,a,b,nmcmc,tl=1,verbose=T){ # assumes inputs to mod are standardized to (0,1)
+  p<-ncol(mod$xx.des)
+  ny<-length(y)
+  ns<-mod$nmcmc-mod$nburn # number of emu mcmc samples
+  ntemps<-length(tl)
+
+  theta<-array(dim=c(nmcmc,ntemps,p))
+  s2<-matrix(nrow=nmcmc,ncol=ntemps)
+  #temp.ind<-matrix(nrow=nmcmc,ncol=ntemps)
+
+  #theta<-array(dim=c(nmcmc,p))
+  #s2<-rep(NA,nmcmc)
+  itl<-1/tl
+
+
+  theta[1,,]<-runif(ntemps*p)
+  #browser()
+  pred.curr<-predict(mod,theta[1,,],mcmc.use=sample(ns,size=1),nugget = T)
+  s2[1,]<-1/rgammaTemper(ntemps,ny/2+a,b+ (pred.curr-y)^2, itl)
+
+
+
+  eps<-1e-10
+  cc<-2.4^2/p/10
+  S<-mu<-cov<-list()
+  for(t in 1:ntemps)
+    S[[t]]<-diag(p)*1e-6
+  count<-matrix(0,nrow=ntemps,ncol=ntemps)
+
+
+  for(i in 2:nmcmc){
+
+    theta[i,,]<-theta[i-1,,]
+
+    if(i==300){
+      for(t in 1:ntemps){
+        mu[[t]]<-colMeans(theta[1:(i-1),t,])
+        cov[[t]]<-cov(theta[1:(i-1),t,])
+        S[[t]]<-cov(theta[1:(i-1),t,])*cc+diag(eps*cc,p)
+      }
+    }
+    if(i>300){
+      for(t in 1:ntemps){
+        mu[[t]]<-mu[[t]]+(theta[(i-1),t,]-mu[[t]])/(i-1)
+        cov[[t]]<-(i-2)/(i-1)*cov[[t]] + (i-2)/(i-1)^2*outer(theta[(i-1),t,]-mu[[t]],theta[(i-1),t,]-mu[[t]])
+        S[[t]]<-cov[[t]]*cc+diag(eps*cc,p)
+      }
+    }
+    theta.cand<-matrix(nrow=ntemps,ncol=p)
+    for(t in 1:ntemps)
+      theta.cand[t,]<-rmnorm(theta[i-1,t,],S[[t]])
+
+    pred.cand<-predict(mod,theta.cand,mcmc.use=sample(ns,size=1),nugget=F)
+    for(t in 1:ntemps){
+      if(any(theta.cand[t,]<0 | theta.cand[t,]>1))
+        alpha<- -9999
+      else{
+        #browser()
+        alpha<- -.5/s2[i-1,t]*itl[t]*((y-pred.cand[t])^2-(y-pred.curr[t])^2)
+      }
+      if(log(runif(1))<alpha){
+        theta[i,t,]<-theta.cand[t,]
+        count[t,t]<-count[t,t]+1
+        pred.curr<-pred.cand
+      }
+    }
+
+    s2[i,]<-1/rgammaTemper(ntemps,ny/2+a, b+(pred.curr-y)^2, itl)
+
+    #pred.curr<-predict(mod,theta[i,,],mcmc.use=sample(ns,size=1),trunc.error=F,nugget=T)[1,,]
+
+    if(i>1000 & ntemps>1){
+      sw<-sort(sample(ntemps,size=2))
+
+      alpha<-(itl[sw[2]]-itl[sw[1]])*(
+        -ny/2*log(s2[i,sw[1]]) - .5/s2[i,sw[1]]*(y-pred.curr[sw[1]])^2 -(a+1)*log(s2[i,sw[1]])-b/s2[i,sw[1]]
+        +ny/2*log(s2[i,sw[2]]) + .5/s2[i,sw[2]]*(y-pred.curr[sw[2]])^2 +(a+1)*log(s2[i,sw[2]])+b/s2[i,sw[2]]
+        #- .5/s2[i,sw[2]]*sum((y-pred.curr[sw[2],])^2)
+        #+ .5/s2[i,sw[1]]*sum((y-pred.curr[sw[1],])^2)
+      )
+
+      if(log(runif(1))<alpha){
+        #if(s2[i,sw[1]]/s2[i,sw[2]]<.5 & sw[1]==1)
+        #  browser()
+
+        temp<-theta[i,sw[1],]
+        theta[i,sw[1],]<-theta[i,sw[2],]
+        theta[i,sw[2],]<-temp
+        temp<-s2[i,sw[1]]
+        s2[i,sw[1]]<-s2[i,sw[2]]
+        s2[i,sw[2]]<-temp
+        #temp<-sort(temp.ind[i,sw[1]])
+        #temp.ind[i,sw[1]]<-temp.ind[i,sw[2]]
+        #temp.ind[i,sw[2]]<-temp
+        count[sw[1],sw[2]]<-count[sw[1],sw[2]]+1
+      }
+    }
+
+    pred.curr<-predict(mod,theta[i,,],mcmc.use=sample(ns,size=1),nugget=F)
+
+
+    if(verbose & i%%100==0){
+      pr<-c('MCMC iteration',i,myTimestamp(),'count:',count)
+      cat(pr,'\n')
+    }
+  }
+
+  #browser()
   return(list(theta=theta,s2=s2,count=count))
 }
 
