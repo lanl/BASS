@@ -24,7 +24,7 @@ library(BASS)
 
 
 
-BASS is an R package for fitting Bayesian Adaptive Spline Surface models [available on CRAN](https://CRAN.R-project.org/package=BASS) with a development version [available on GitHub](https://github.com/lanl/BASS).
+BASS is an R package for fitting Bayesian Adaptive Spline Surface models [available on CRAN](https://CRAN.R-project.org/package=BASS) with a development version [available on GitHub](https://github.com/lanl/BASS).  BASS models most closely resemble Bayesian multivariate adaptive regression splines (Bayesian MARS).
 
 To install the development version, use
 

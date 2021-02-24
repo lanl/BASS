@@ -3,7 +3,7 @@ BASS
 
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![](https://img.shields.io/badge/devel%20version-1.2.2-purple.svg)](https://github.com/lanl/BASS)
+[![](https://img.shields.io/badge/devel%20version-1.2.4-purple.svg)](https://github.com/lanl/BASS)
 [![](https://www.r-pkg.org/badges/version/BASS?color=orange)](https://cran.r-project.org/package=BASS)
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -11,6 +11,8 @@ v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/li
 BASS is an R package for fitting Bayesian Adaptive Spline Surface models
 [available on CRAN](https://CRAN.R-project.org/package=BASS) with a
 development version [available on GitHub](https://github.com/lanl/BASS).
+BASS models most closely resemble Bayesian multivariate adaptive
+regression splines (Bayesian MARS).
 
 To install the development version, use
 
@@ -25,9 +27,9 @@ vignette](https://CRAN.R-project.org/package=BASS/vignettes/).
 
 # References
 
-<div id="refs" class="references">
+<div id="refs" class="references csl-bib-body hanging-indent">
 
-<div id="ref-francom2019inferring">
+<div id="ref-francom2019inferring" class="csl-entry">
 
 Francom, Devin, Bruno Sansó, Vera Bulaevskaya, Donald Lucas, and Matthew
 Simpson. 2019. “Inferring Atmospheric Release Characteristics in a Large
@@ -37,12 +39,12 @@ American Statistical Association*.
 
 </div>
 
-<div id="ref-francom2018sensitivity">
+<div id="ref-francom2018sensitivity" class="csl-entry">
 
 Francom, Devin, Bruno Sansó, Ana Kupresanin, and Gardar Johannesson.
-2018. “Sensitivity analysis and emulation for functional data using
-Bayesian adaptive splines.” *Statistica Sinica*.
-<https://doi.org/10.5705/ss.202016.0130>.
+2018. “<span class="nocase">Sensitivity analysis and emulation for
+functional data using Bayesian adaptive splines</span>.” *Statistica
+Sinica*. <https://doi.org/10.5705/ss.202016.0130>.
 
 </div>
 

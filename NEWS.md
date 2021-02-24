@@ -1,3 +1,7 @@
+# BASS 1.2.4
+- attempt to vectorize standardization in predict.bass
+- Tempering, decorrelation, adaptation, etc, for more robust calibration
+
 # BASS 1.2.3
 - add nugget option to predict.bass
 
