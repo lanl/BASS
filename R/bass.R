@@ -59,31 +59,31 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   ## check inputs
 
   if(!posInt(maxInt))
-    stop('invalud maxInt')
+    stop('invalid maxInt')
   if(!posInt(maxInt.func))
-    stop('invalud maxInt.func')
+    stop('invalid maxInt.func')
   if(!posInt(maxInt.cat))
-    stop('invalud maxInt.cat')
+    stop('invalid maxInt.cat')
   #if(!posInt(degree))
-  #  stop('invalud degree')
+  #  stop('invalid degree')
   if(!is.null(npart)){
     if(!posInt(npart))
-      stop('invalud npart')
+      stop('invalid npart')
   }
   if(!is.null(npart.func)){
     if(!posInt(npart.func))
-      stop('invalud npart.func')
+      stop('invalid npart.func')
   }
   if(!is.null(start.temper)){
     if(!posInt(start.temper))
-      stop('invalud start.temper')
+      stop('invalid start.temper')
   }
   if(!posInt(nmcmc))
-    stop('invalud nmcmc')
+    stop('invalid nmcmc')
   if(!posInt(nburn))
-    stop('invalud nburn')
+    stop('invalid nburn')
   if(!posInt(thin))
-    stop('invalud thin')
+    stop('invalid thin')
   if(nburn>=nmcmc)
     stop('nmcmc must be greater than nburn')
   if(thin>(nmcmc-nburn))
