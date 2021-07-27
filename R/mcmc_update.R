@@ -67,7 +67,9 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
   qf2<-crossprod(curr$R%*%curr$beta)
   curr$s2.rate<-.5*(data$ssy - crossprod(curr$bhat,curr$Xty[1:curr$nc])/(1+curr$beta.prec))
   if(curr$s2.rate<=0)
-    stop('sum(y^2) too large, please center/rescale y for better stability')
+    curr$s2.rate<-.Machine$double.eps
+    #stop('sum(y^2) too large, please center/rescale y for better stability')
+
   s2.a<-prior$g1+(data$n)/2 # +1 for intercept
   s2.b<-prior$g2+curr$s2.rate
   if(s2.b<=0){
