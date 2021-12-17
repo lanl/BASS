@@ -10,6 +10,7 @@
 ########################################################################
 genCandBasis<-function(minInt,maxInt,I.vec,z.vec,p,xxt,q,xx.unique.ind,vars.len,prior){
   # get number of variables in interaction
+
   n.int<-sample(minInt:maxInt,size=1,prob=I.vec)
   if(n.int==0)
     return(list(basis=rep(1,ncol(xxt)),n.int=n.int,lbmcmp=0))
@@ -25,6 +26,7 @@ genCandBasis<-function(minInt,maxInt,I.vec,z.vec,p,xxt,q,xx.unique.ind,vars.len,
     #knotInd<-sapply(vars.len[vars],sample.int,size=1)
     knotInd<-sapply(xx.unique.ind[vars],sample,size=1)
   }
+  #browser()
   # make basis, get reversibility term
   #knots<-sapply(1:n.int,function(nn) xxt.unique[[vars[nn]]][knotInd[nn]])
   knots<-xxt[cbind(vars,knotInd)]

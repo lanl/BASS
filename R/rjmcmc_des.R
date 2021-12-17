@@ -30,10 +30,18 @@ birth_des<-function(curr,prior,data){
     return(curr)
   }
 
-
   ## calculate log acceptance probability
-  alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) + log(curr$lam) - log(curr$nc) + log(data$death.prob.next/data$birth.prob) - cand.des$lbmcmp + .5*log(curr$beta.prec) - .5*log(1+curr$beta.prec))
-  #cat(- cand.des$lbmcmp,' ')
+  alpha<- data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    + log(curr$lam) - log(curr$nc)
+    + log(data$death.prob.next/data$birth.prob) - cand.des$lbmcmp
+    + .5*log(curr$beta.prec+prior$beta.jprior.ind) - .5*log(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      .5*log(curr$s2)
+      + .5*sum(log(diag(qf.cand.list$R)))
+      -.5*sum(log(diag(curr$R)))
+      )
+    )
 
   ## assign new values
   if(log(runif(1)) < alpha){
@@ -64,7 +72,17 @@ death_des<-function(curr,prior,data){
   lpbmcmp<-logProbChangeMod(curr$n.int.des[basis],curr$vars.des[basis,1:curr$n.int.des[basis]],I.vec.des,z.vec.des,data$pdes,data$vars.len.des,prior$maxInt.des,prior$miC)
 
   # calculate log acceptance probability
-  alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) - log(curr$lam) + log(data$birth.prob.last/data$death.prob) + log(curr$nbasis) + lpbmcmp - .5*log(curr$beta.prec) + .5*log(1+curr$beta.prec))
+  alpha<- data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    - log(curr$lam) + log(data$birth.prob.last/data$death.prob)
+    + log(curr$nbasis) + lpbmcmp
+    - .5*log(curr$beta.prec+prior$beta.jprior.ind) + .5*log(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      -.5*log(curr$s2)
+      +.5*sum(log(diag(qf.cand.list$R)))
+      -.5*sum(log(diag(curr$R)))
+      )
+    )
 
   if(log(runif(1)) < alpha){
     curr<-deleteBasis(curr,basis,ind,qf.cand.list,I.star.des,I.vec.des,z.star.des,z.vec.des)
@@ -79,8 +97,6 @@ change_des<-function(curr,prior,data){
   int.change<-sample(1:(curr$n.int.des[basis]),size=1)
   use<-1:curr$n.int.des[basis]
   cand.des<-genBasisChange(curr,basis,int.change,data$xxt.des,prior$q,knots=curr$knots.des[basis,use],knotInd=curr$knotInd.des[basis,use],signs=curr$signs.des[basis,use],vars=curr$vars.des[basis,use],xx.unique.ind=data$unique.ind.des)
-
-
 
   if(sum(cand.des$basis!=0)<prior$npart.des){
     return(curr)
@@ -99,7 +115,12 @@ change_des<-function(curr,prior,data){
     return(curr)
   }
 
-  alpha<-data$itemp.ladder[curr$temp.ind]*.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+  alpha<-data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      .5*sum(log(diag(qf.cand.list$R)))-.5*sum(log(diag(curr$R)))
+      )
+    )
 
   if(log(runif(1))<alpha){
     curr<-changeBasis(curr,cand.des,basis,qf.cand.list,XtX.cand,Xty.cand)

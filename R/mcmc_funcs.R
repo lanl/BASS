@@ -66,11 +66,16 @@ lp<-function(curr,prior,data){
     - (curr$s2.rate+prior$g2)/curr$s2
     -(data$n/2+1+(curr$nbasis+1)/2 +prior$g1)*log(curr$s2) # changed -g1 to +g1
     + sum(log(abs(diag(curr$R)))) # .5*determinant of XtX
-    + (prior$a.beta.prec+(curr$nbasis+1)/2-1)*log(curr$beta.prec) - prior$b.beta.prec*curr$beta.prec
     - (curr$nbasis+1)/2*log(2*pi)
     + (prior$h1+curr$nbasis-1)*log(curr$lam) - curr$lam*(prior$h2+1) # curr$nbasis-1 because poisson prior is excluding intercept (for curr$nbasis instead of curr$nbasis+1)
     #-lfactorial(curr$nbasis) # added, but maybe cancels with prior
   )
+
+  if(prior$beta.gprior.ind){
+    tt<-tt + (prior$a.beta.prec+(curr$nbasis+1)/2-1)*log(curr$beta.prec) - prior$b.beta.prec*curr$beta.prec
+  }
+
+
   if(curr$nbasis==0){
     return(tt)
   }

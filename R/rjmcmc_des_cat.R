@@ -39,10 +39,18 @@ birth_des_cat<-function(curr,prior,data){
   }
 
   ## calculate log acceptance probability
-  alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) + log(curr$lam) - log(curr$nc) + log(data$death.prob.next/data$birth.prob) - cand.des$lbmcmp - cand.cat$lbmcmp + .5*log(curr$beta.prec) - .5*log(1+curr$beta.prec))
-  #cat(- cand.des$lbmcmp - cand.cat$lbmcmp,' ')
-  #if(qf.cand.list$qf-curr$qf < 1e-10)
-  #  browser()
+  alpha<- data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    + log(curr$lam) - log(curr$nc) + log(data$death.prob.next/data$birth.prob)
+    - cand.des$lbmcmp - cand.cat$lbmcmp
+    + .5*log(curr$beta.prec+prior$beta.jprior.ind) - .5*log(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      .5*log(curr$s2)
+      + .5*sum(log(diag(qf.cand.list$R)))
+      -.5*sum(log(diag(curr$R)))
+    )
+    )
+
 
   ## assign new values
   if(log(runif(1)) < alpha){
@@ -93,7 +101,17 @@ death_des_cat<-function(curr,prior,data){
     #browser()
 
   # calculate log acceptance probability
-  alpha<- data$itemp.ladder[curr$temp.ind]*(.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec) - log(curr$lam) + log(data$birth.prob.last/data$death.prob) + log(curr$nbasis) + lpbmcmp - .5*log(curr$beta.prec) + .5*log(1+curr$beta.prec))
+  alpha<- data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    - log(curr$lam) + log(data$birth.prob.last/data$death.prob)
+    + log(curr$nbasis) + lpbmcmp
+    - .5*log(curr$beta.prec+prior$beta.jprior.ind) + .5*log(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      -.5*log(curr$s2)
+      +.5*sum(log(diag(qf.cand.list$R)))
+      -.5*sum(log(diag(curr$R)))
+    )
+    )
 
   if(log(runif(1)) < alpha){
     curr<-deleteBasis(curr,basis,ind,qf.cand.list,I.star.des,I.vec.des,z.star.des,z.vec.des)
@@ -141,7 +159,12 @@ change_des_cat<-function(curr,prior,data){
     return(curr)
   }
 
-  alpha<-data$itemp.ladder[curr$temp.ind]*.5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+  alpha<-data$itemp.ladder[curr$temp.ind]*(
+    .5/curr$s2*(qf.cand.list$qf-curr$qf)/(1+curr$beta.prec)
+    + prior$beta.jprior.ind*(
+      .5*sum(log(diag(qf.cand.list$R)))-.5*sum(log(diag(curr$R)))
+    )
+  )
 
 
   if(log(runif(1))<alpha){

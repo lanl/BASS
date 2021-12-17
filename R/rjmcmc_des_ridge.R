@@ -45,7 +45,7 @@ birth_des_ridge<-function(curr,prior,data){
 }
 
 
-death_des<-function(curr,prior,data){
+death_des_ridge<-function(curr,prior,data){
   basis<-sample(1:curr$nbasis,size=1)
   ind<-(1:curr$nc)[-(basis+1)]
 
@@ -74,7 +74,7 @@ death_des<-function(curr,prior,data){
 }
 
 
-change_des<-function(curr,prior,data){
+change_des_ridge<-function(curr,prior,data){
   basis<-sample(1:curr$nbasis,size=1)
   int.change<-sample(1:(curr$n.int.des[basis]),size=1)
   use<-1:curr$n.int.des[basis]

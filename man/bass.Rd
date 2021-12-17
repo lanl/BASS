@@ -27,6 +27,7 @@ bass(
   b.tau = NULL,
   w1 = 5,
   w2 = 5,
+  beta.prior = "g",
   temp.ladder = NULL,
   start.temper = NULL,
   curr.list = NULL,
@@ -80,6 +81,8 @@ bass(
 \item{w1}{nominal weight for degree of interaction, used in generating candidate basis functions.  Should be greater than 0.}
 
 \item{w2}{nominal weight for variables, used in generating candidate basis functions.  Should be greater than 0.}
+
+\item{beta.prior}{what type of prior to use for basis coefficients, "g" or "jeffreys"}
 
 \item{temp.ladder}{temperature ladder used for parallel tempering.  The first value should be 1 and the values should increase.}
 

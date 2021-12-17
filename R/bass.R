@@ -34,6 +34,7 @@
 #' @param b.tau rate for gamma prior on \eqn{\tau}. Defaults to one over the number of observations, which centers the prior for the basis function weights on the unit information prior.
 #' @param w1 nominal weight for degree of interaction, used in generating candidate basis functions.  Should be greater than 0.
 #' @param w2 nominal weight for variables, used in generating candidate basis functions.  Should be greater than 0.
+#' @param beta.prior what type of prior to use for basis coefficients, "g" or "jeffreys"
 #' @param temp.ladder temperature ladder used for parallel tempering.  The first value should be 1 and the values should increase.
 #' @param start.temper when to start tempering (after how many MCMC iterations). Defaults to 1000 or half of burn-in, whichever is smaller.
 #' @param curr.list list of starting models (one element for each temperature), could be output from a previous run under the same model setup.
@@ -50,7 +51,7 @@
 #' @import utils
 #' @example inst/examples.R
 #'
-bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,maxBasis=1000,npart=NULL,npart.func=NULL,nmcmc=10000,nburn=9000,thin=1,g1=0,g2=0,s2.lower=0,h1=10,h2=10,a.tau=.5,b.tau=NULL,w1=5,w2=5,temp.ladder=NULL,start.temper=NULL,curr.list=NULL,save.yhat=TRUE,small=FALSE,verbose=TRUE,ret.str=F){
+bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,maxBasis=1000,npart=NULL,npart.func=NULL,nmcmc=10000,nburn=9000,thin=1,g1=0,g2=0,s2.lower=0,h1=10,h2=10,a.tau=.5,b.tau=NULL,w1=5,w2=5,beta.prior='g',temp.ladder=NULL,start.temper=NULL,curr.list=NULL,save.yhat=TRUE,small=FALSE,verbose=TRUE,ret.str=F){
 
   cl<-match.call()
   ########################################################################
@@ -80,8 +81,8 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   }
   if(!posInt(nmcmc))
     stop('invalid nmcmc')
-  if(!posInt(nburn))
-    stop('invalid nburn')
+  #if(!posInt(nburn))
+  #  stop('invalid nburn')
   if(!posInt(thin))
     stop('invalid thin')
   if(nburn>=nmcmc)
@@ -172,6 +173,9 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     type<-paste(type,'cat',sep='_')
   if(func)
     type<-paste(type,'func',sep='_')
+
+
+
 
   # so cases are des, cat, des_cat, des_func, cat_func, des_cat_func
 
@@ -289,6 +293,8 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   if(des+cat+func==1) # if there is only one part, can't have minInt of 0
     prior$minInt<-1
   prior$miC<-abs(prior$minInt-1)
+  prior$beta.gprior.ind<-as.numeric(beta.prior=='g')
+  prior$beta.jprior.ind<-as.numeric(beta.prior=='jeffreys')
 
 
   ## make an object to store current MCMC state (one for each temperature)
@@ -325,7 +331,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
 
       curr.list[[i]]$s2<-1
       curr.list[[i]]$lam<-1
-      curr.list[[i]]$beta.prec<-1
+      curr.list[[i]]$beta.prec<-1*prior$beta.gprior.ind
       curr.list[[i]]$nbasis<-0
       curr.list[[i]]$nc<-1
 
@@ -510,6 +516,11 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
       }
       model.lookup[keep.sample]<-n.models # update lookup table
     }
+
+    #if(calibrate){
+    #  theta[i,]<-sampleTheta(curr.list[[cold.chain]])
+    #  delta[i,]<-sampleDelta(curr.list[[cold.chain]])
+    #}
 
     if(verbose & i%%1000==0){
       pr<-c('MCMC iteration',i,myTimestamp(),'nbasis:',curr.list[[cold.chain]]$nbasis)

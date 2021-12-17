@@ -20,6 +20,7 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
   if(curr$nbasis==prior$maxBasis){
     u<-sample(2:3,size=1) # no birth
   }
+  #browser()
   if(u==1){ # birth
     curr<-funcs$birth(curr,prior,data)
   } else if(u==2){ # death
@@ -70,7 +71,7 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
     curr$s2.rate<-.Machine$double.eps
     #stop('sum(y^2) too large, please center/rescale y for better stability')
 
-  s2.a<-prior$g1+(data$n)/2 # +1 for intercept
+  s2.a<-prior$g1+(data$n-curr$nc*prior$beta.jprior.ind)/2 # +1 for intercept
   s2.b<-prior$g2+curr$s2.rate
   if(s2.b<=0){
     prior$g2<-prior$g2+1
@@ -79,8 +80,9 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
   }
   #curr$s2<-rigammaTemper(1,s2.a,s2.b,data$itemp.ladder[curr$temp.ind])
   curr$s2<-rtigammaTemper(1,s2.a,s2.b,data$itemp.ladder[curr$temp.ind],prior$s2.lower)
+  #browser()
   if(is.nan(curr$s2) | is.na(curr$s2)) # major variance inflation, get huge betas from curr$R.inv.t, everything becomes unstable
-    browser()
+    #browser()
   if(curr$s2==0 | curr$s2>1e10){ # tempering instability, this temperature too small
     if(curr$s2>(data$ssy/data$n)){
       # browser()
@@ -95,7 +97,7 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
   # beta.prec
   beta.prec.a<-prior$a.beta.prec+(curr$nbasis+1)/2
   beta.prec.b<-prior$b.beta.prec+1/(2*curr$s2)*qf2
-  curr$beta.prec<-rgammaTemper(1,beta.prec.a,beta.prec.b,data$itemp.ladder[curr$temp.ind])
+  curr$beta.prec<-rgammaTemper(1,beta.prec.a,beta.prec.b,data$itemp.ladder[curr$temp.ind])*prior$beta.gprior.ind
 
   ## save log posterior
   curr$lpost<-lp(curr,prior,data)
