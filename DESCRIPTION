@@ -1,6 +1,6 @@
 Package: BASS
-Version: 1.2.4
-Date: 2020-08-31
+Version: 1.3.0
+Date: 2021-12-16
 Title: Bayesian Adaptive Spline Surfaces
 Description: Bayesian fitting and sensitivity analysis methods for adaptive
     spline surfaces described in <doi:10.18637/jss.v094.i08>. Built to handle continuous and categorical inputs as well as
@@ -17,5 +17,5 @@ Suggests:
     formatR
 VignetteBuilder: knitr
 Imports: truncdist, hypergeo
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2
 Encoding: UTF-8

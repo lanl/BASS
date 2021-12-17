@@ -1,6 +1,10 @@
+# BASS 1.3.0
+- new "jeffreys" option for prior for basis coefficients
+- new function calibrate.basisBasis for modular calibration
+
 # BASS 1.2.4
-- attempt to vectorize standardization in predict.bass
-- Tempering, decorrelation, adaptation, etc, for more robust calibration
+- vectorize standardization in predict.bass
+- tempering, decorrelation, adaptive MCMC, etc, for more robust calibration
 
 # BASS 1.2.3
 - add nugget option to predict.bass
@@ -19,7 +23,7 @@
 
 # BASS 1.1.2
 - added unit tests for prediction and Sobol decomposition for various validated models
-- added ability to write models to JSON, and read models from JSON
+- added ability to write models to JSON, and read models from JSON (later removed)
 - various options added to existing functions
 - existing function bassOB renamed to bassBasis
 
