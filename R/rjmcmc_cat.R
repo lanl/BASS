@@ -36,7 +36,7 @@ birth_cat<-function(curr,prior,data){
     + log(curr$lam) - log(curr$nc) + log(data$death.prob.next/data$birth.prob)
     - cand.cat$lbmcmp + .5*log(curr$beta.prec+prior$beta.jprior.ind) - .5*log(1+curr$beta.prec)
     + prior$beta.jprior.ind*(
-      .5*log(2*pi*curr$s2)
+      .5*log(2*pi)#*curr$s2)
       + .5*sum(log(diag(qf.cand.list$R)))
       -.5*sum(log(diag(curr$R)))
     )
@@ -77,7 +77,7 @@ death_cat<-function(curr,prior,data){
     + log(curr$nbasis) + lpbmcmp
     - .5*log(curr$beta.prec+prior$beta.jprior.ind) + .5*log(1+curr$beta.prec)
     + prior$beta.jprior.ind*(
-      -.5*log(2*pi*curr$s2)
+      -.5*log(2*pi)#*curr$s2)
       +.5*sum(log(diag(qf.cand.list$R)))
       -.5*sum(log(diag(curr$R)))
     )
