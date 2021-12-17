@@ -67,8 +67,36 @@ matplot(t(apply(pred,2:3,mean)),type='l') # mean prediction
 sens<-sobolBasis(mod,int.order = 2,ncores = max(parallel::detectCores()-2,1),
                  mcmc.use=1000) # for speed, only use a few samples
 plot(sens)
-}
 
+
+## calibration
+x.true<-runif(9,0,1) # what we are trying to learn
+yobs<-f(cbind(xfunc,kronecker(rep(1,nfunc),t(x.true)))) + rnorm(nfunc,0,.1) # calibration data (with measurement error)
+plot(yobs)
+
+cal<-calibrate.bassBasis(y=yobs,mod=mod,
+                         discrep.mean=rep(0,nfunc),
+                         discrep.mat=diag(nfunc)[,1:2]*.0000001,
+                         sd.est=.1,
+                         s2.df=50,
+                         s2.ind=rep(1,nfunc),
+                         meas.error.cor=diag(nfunc),
+                         bounds=rbind(rep(0,9),rep(1,9)),
+                         nmcmc=10000,
+                         temperature.ladder=1.05^(0:30),type=1)
+
+nburn<-5000
+uu<-seq(nburn,10000,5)
+
+pairs(rbind(cal$theta[uu,1,],x.true),col=c(rep(1,length(uu)),2),ylim=c(0,1),xlim=c(0,1))
+
+pred<-apply(predict(mod,cal$theta[uu,1,],nugget = T,trunc.error = T,mcmc.use = cal$ii[uu]),3,function(x) diag(x)+rnorm(length(uu),0,sqrt(cal$s2[uu,1,1])))
+qq<-apply(pred,2,quantile,probs=c(.025,.975))
+matplot(t(qq),col='lightgrey',type='l')
+lines(yobs,lwd=3)
+
+
+}
 ## minimal example for CRAN testing
 mod<-bassPCA(1:10,matrix(1:20,10),n.pc=2,nmcmc=2,nburn=1)
 }
