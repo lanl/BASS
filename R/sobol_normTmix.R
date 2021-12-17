@@ -393,16 +393,17 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
 
       if(getEffects){
 ##################################################################
-      # main effects
+      # main effects - trying to get fi - f0, can leave off the intercepts (a0 in Chen 2004)
 
+        f0<-bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod)) # without a0
         if(main.effects){
-        for(ef in 1:ncol(combs[[1]])){
-          effects[[1]][mcmc.use.mod,ef,]<- -bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod))
-          for(m in 1:tl$M){
-            pp.use<-combs[[1]][,ef]
-            if(tl$s[m,pp.use]!=0){
+        for(ef in 1:ncol(combs[[1]])){ # go through each effect
+          effects[[1]][mcmc.use.mod,ef,]<- -f0
+          for(m in 1:tl$M){ # go through each basis function
+            pp.use<-combs[[1]][,ef] # which variable is this effect
+            if(tl$s[m,pp.use]!=0){ # if the basis function uses the variable
               effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+tcrossprod(bassMod$beta[mcmc.use.mod,m+1],makeBasis(tl$s[m,pp.use],1,tl$t[m,pp.use],xxt,1)*prod(C1.temp[m,-pp.use]))
-            } else{
+            } else{ # if the basis function does not use the variable (integrate over all)
               effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+bassMod$beta[mcmc.use.mod,m+1]*prod(C1.temp[m,])
             }
           }
@@ -416,7 +417,8 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
         if(two.ints){
         ## 2-way interactions
         for(ef in 1:ncol(combs[[2]])){
-          effects[[2]][mcmc.use.mod,ef,,]<- -bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod))
+          for(kk in 1:length(mcmc.use.mod))
+            effects[[2]][mcmc.use.mod[kk],ef,,]<- -f0[kk]
 
           pp.use<-combs[[2]][,ef]
           pp.use1<-which(combs[[1]]%in%combs[[2]][1,ef])
@@ -442,13 +444,13 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
 
             }
           }
-
-        #image.plot(effects[[2]][1,1,,])
+        #browser()
+        #image.plot(effects[[2]][1,1,,],zlim=c(-10,10))
         #image.plot(matrix(10*sin(2*pi*xx2[,1]*xx2[,2]),ncol=100))
 
         #xx2<-expand.grid(t(xxt),t(xxt))
         #a1<--5/pi*sum( (-4*pi^2)^(1:50)/((2*(1:50))*factorial(2*(1:50))) )
-        #image.plot(matrix(10*sin(2*pi*xx2[,1]*xx2[,2]) - 10*sin(pi*xx2[,1])^2/(pi*xx2[,1]) - 10*sin(pi*xx2[,2])^2/(pi*xx2[,2]) + a1,nrow=100))
+        #image.plot(matrix(10*sin(2*pi*xx2[,1]*xx2[,2]) - 10*sin(pi*xx2[,1])^2/(pi*xx2[,1]) - 10*sin(pi*xx2[,2])^2/(pi*xx2[,2]) + a1,nrow=100),zlim=c(-10,10))
 
         }
         }
