@@ -1,6 +1,7 @@
 # BASS 1.3.0
 - new "jeffreys" option for prior for basis coefficients
 - new function calibrate.basisBasis for modular calibration
+- sobol effects bug fix
 
 # BASS 1.2.4
 - vectorize standardization in predict.bass
