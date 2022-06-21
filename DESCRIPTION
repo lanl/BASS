@@ -7,7 +7,7 @@ Description: Bayesian fitting and sensitivity analysis methods for adaptive
     functional or scalar output. An extension of the methodology in Denison, Mallick
     and Smith (1998) <doi:10.1023/A:1008824606259>.
 Authors@R: c(person("Devin", "Francom", role = c("aut", "cre"), email = "devinfrancom@gmail.com"),
-              person("Bruno", "Sanso", role = "ths"))
+              person("Bruno", "Sanso", role = "ths"), person("Kellin", "Rumsey", role = "aut"))
 License: GPL-3
 Suggests: 
     knitr,
