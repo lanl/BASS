@@ -66,8 +66,12 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
   newdata<-as.data.frame(newdata)
   cx<-sapply(newdata,class)
   cx.factor<- cx == 'factor'
-  if(!all(cx==object$cx))
+  object.cx.factor<- object$cx == 'factor'
+  #if(!all(cx==object$cx))
+  #  stop('number/order of columns of newdata does not match number/order of inputs used to train object')
+  if(!all(cx.factor == object.cx.factor))
     stop('number/order of columns of newdata does not match number/order of inputs used to train object')
+
 
   newdata.des<-newdata[,!cx.factor,drop=F]
   newdata.cat<-newdata[,cx.factor,drop=F]
