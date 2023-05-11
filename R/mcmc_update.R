@@ -71,7 +71,7 @@ updateMCMC<-function(curr,prior,data,funcs=funcs){
     curr$s2.rate<-.Machine$double.eps
     #stop('sum(y^2) too large, please center/rescale y for better stability')
 
-  s2.a<-prior$g1+(data$n-prior$beta.jprior.ind)/2 # +1 for intercept
+  s2.a<-prior$g1+(data$n-prior$beta.jprior.ind)/2
   s2.b<-prior$g2+curr$s2.rate
   if(s2.b<=0){
     prior$g2<-prior$g2+1
