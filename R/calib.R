@@ -54,8 +54,12 @@ calibrate.bassBasis<-function(y,
   rmnorm<-function(mu, S){
     mu+c(rnorm(length(mu))%*%chol(S))
   }
-  ldig.kern<-function(x,a,b){
-    -(a+1)*log(x)-b/x
+  if(any(s2.df==0)){
+    ldig.kern<-function(x,a,b)
+      -log(x+1)
+  } else{
+    ldig.kern<-function(x,a,b)
+      -(a+1)*log(x)-b/x
   }
   unscale.range<-function(x,r){
     x*(r[2]-r[1])+r[1]
@@ -146,9 +150,9 @@ calibrate.bassBasis<-function(y,
 
     lik.cov.inv<-function(dat,curr){#trunc.error.cov,Sigma,discrep.mat,discrep.vars,basis,emu.vars){
       Sigma<-cor2cov(dat$meas.error.cor,sqrt(curr$s2[dat$s2.ind]))
-      mat<-chol(dat$trunc.error.cov+Sigma+dat$discrep.cov+dat$basis%*%diag(curr$emu.vars)%*%t(dat$basis))
+      mat<-chol(dat$trunc.error.cov+Sigma+dat$discrep.cov+dat$basis%*%diag(curr$emu.vars,mod$dat$n.pc)%*%t(dat$basis))
       inv<-chol2inv(mat)
-      ldet<-2*sum(diag(mat))
+      ldet<-2*sum(log(diag(mat)))
       return(list(inv=inv, ldet=ldet))
     }
 
@@ -167,6 +171,8 @@ calibrate.bassBasis<-function(y,
     dat$trunc.error.var<-diag(trunc.error.cov) # assumed diagonal
     dat$D<-discrep.mat
     dat$discrep<-dat$D%*%discrep.vars[1,t,]
+    dat$discrep.tau<-1
+    dat$nd<-ncol(dat$D)
 
     for(t in 1:ntemps){
       curr[[t]]$s2<-s2[1,t,]
@@ -283,14 +289,21 @@ calibrate.bassBasis<-function(y,
 
     }
 
+    #if(i>5000)
+    #  browser()
+
     ########################################################
     ## update discrep.vars with gibbs step
     #???~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if(class=='func'){
-      discrep.vars[i,,]<-0
-      for(t in 1:ntemps)
-        curr[[t]]$discrep.vars<-0
+      for(t in 1:ntemps){
+        discrep.S<-my.solve(diag(dat$nd)/dat$discrep.tau + t(dat$D) %*% curr[[t]]$cov$inv %*% dat$D)
+        discrep.m<-t(dat$D) %*% curr[[t]]$cov$inv %*% (dat$y-curr[[t]]$pred)
+        discrep.vars[i,t,]<-c(rmnorm(discrep.S%*%discrep.m, discrep.S/itl[t]))
+        curr[[t]]$discrep.vars<-discrep.vars[i,t,]
+        curr[[t]]$discrep<-dat$D%*%discrep.vars[i,t,]
+      }
     }
 
 
@@ -422,8 +435,8 @@ calibrate.bassBasis<-function(y,
           s2[i,sw[1],]<-s2[i,sw[2],]
           s2[i,sw[2],]<-temp
           temp<-discrep.vars[i,sw[1],]
-          #discrep.vars[i,sw[1],]<-discrep.vars[i,sw[2],]
-          #discrep.vars[i,sw[2],]<-temp
+          discrep.vars[i,sw[1],]<-discrep.vars[i,sw[2],]
+          discrep.vars[i,sw[2],]<-temp
           count[sw[1],sw[2]]<-count[sw[1],sw[2]]+1
           temp<-pred.curr[sw[1],] # not sampling posterior predictive each time, for speed
           pred.curr[sw[1],]<-pred.curr[sw[2],]
@@ -454,7 +467,7 @@ calibrate.bassBasis<-function(y,
   #for(ii in 1:p){
   #  theta[,,ii]<-unscale.range(theta[,,ii],bounds[,ii])
   #}
-  return(list(theta=theta,s2=s2,count=count,count.decor=count.decor,tau=tau,ii=ii,curr,dat))
+  return(list(theta=theta,s2=s2,count=count,count.decor=count.decor,tau=tau,ii=ii,curr=curr,dat=dat,discrep.vars=discrep.vars))
 }
 
 
