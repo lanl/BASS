@@ -398,13 +398,13 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
         f0<-bassMod$beta[mcmc.use.mod,2:(tl$M+1)]%*%matrix(apply(C1.temp,1,prod)) # without a0
         if(main.effects){
         for(ef in 1:ncol(combs[[1]])){ # go through each effect
-          effects[[1]][mcmc.use.mod,ef,]<- -f0
+          effects[[1]][mod.ind,ef,]<- -f0
           for(m in 1:tl$M){ # go through each basis function
             pp.use<-combs[[1]][,ef] # which variable is this effect
             if(tl$s[m,pp.use]!=0){ # if the basis function uses the variable
-              effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+tcrossprod(bassMod$beta[mcmc.use.mod,m+1],makeBasis(tl$s[m,pp.use],1,tl$t[m,pp.use],xxt,1)*prod(C1.temp[m,-pp.use]))
+              effects[[1]][mod.ind,ef,]<-effects[[1]][mod.ind,ef,]+tcrossprod(bassMod$beta[mcmc.use.mod,m+1],makeBasis(tl$s[m,pp.use],1,tl$t[m,pp.use],xxt,1)*prod(C1.temp[m,-pp.use]))
             } else{ # if the basis function does not use the variable (integrate over all)
-              effects[[1]][mcmc.use.mod,ef,]<-effects[[1]][mcmc.use.mod,ef,]+bassMod$beta[mcmc.use.mod,m+1]*prod(C1.temp[m,])
+              effects[[1]][mod.ind,ef,]<-effects[[1]][mod.ind,ef,]+bassMod$beta[mcmc.use.mod,m+1]*prod(C1.temp[m,])
             }
           }
           #matplot(t(effects[[1]][1,,]),type='l')
@@ -418,15 +418,15 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
         ## 2-way interactions
         for(ef in 1:ncol(combs[[2]])){
           for(kk in 1:length(mcmc.use.mod))
-            effects[[2]][mcmc.use.mod[kk],ef,,]<- -f0[kk]
+            effects[[2]][mod.ind[kk],ef,,]<- -f0[kk]
 
           pp.use<-combs[[2]][,ef]
           pp.use1<-which(combs[[1]]%in%combs[[2]][1,ef])
           pp.use2<-which(combs[[1]]%in%combs[[2]][2,ef])
 
-            effects[[2]][mcmc.use.mod,ef,,]<- sweep(effects[[2]][mcmc.use.mod,ef,,,drop=F], c(1,2,3), effects[[1]][mcmc.use.mod,pp.use1,,drop=F])
+            effects[[2]][mod.ind,ef,,]<- sweep(effects[[2]][mod.ind,ef,,,drop=F], c(1,2,3), effects[[1]][mod.ind,pp.use1,,drop=F])
 
-            effects[[2]][mcmc.use.mod,ef,,]<- sweep(effects[[2]][mcmc.use.mod,ef,,,drop=F], c(1,2,4), effects[[1]][mcmc.use.mod,pp.use2,,drop=F])
+            effects[[2]][mod.ind,ef,,]<- sweep(effects[[2]][mod.ind,ef,,,drop=F], c(1,2,4), effects[[1]][mod.ind,pp.use2,,drop=F])
 
             #image.plot(effects[[2]][mcmc.use.mod[1],ef,,])
 
@@ -440,7 +440,7 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
               if(all(b2==0))
                 b2=b2+1
 
-              effects[[2]][mcmc.use.mod,ef,,]<-effects[[2]][mcmc.use.mod,ef,,] + drop(bassMod$beta[mcmc.use.mod,m+1]%o%(tcrossprod(b1,b2)*prod(C1.temp[m,-pp.use])))
+              effects[[2]][mod.ind,ef,,]<-effects[[2]][mod.ind,ef,,] + drop(bassMod$beta[mcmc.use.mod,m+1]%o%(tcrossprod(b1,b2)*prod(C1.temp[m,-pp.use])))
 
             }
           }
