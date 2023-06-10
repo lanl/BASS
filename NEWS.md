@@ -1,3 +1,7 @@
+# BASS 1.3.1
+- vignette now static to decrease CRAN burden
+- other CRAN changes
+
 # BASS 1.3.0
 - new "jeffreys" option for prior for basis coefficients
 - new function calibrate.basisBasis for modular calibration

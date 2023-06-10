@@ -65,21 +65,21 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
       warning('n.pc too large, using all PCs intead')
   }
 
-  if(class(center)=='logical' & length(center)==1){
+  if(inherits(center,'logical') & length(center)==1){
     y.m<-colMeans(y)
     if(!center)
       y.m<-rep(0,ncol(y))
-  } else if(class(center)=='numeric' & length(center)==ncol(y)){
+  } else if(inherits(center,'numeric') & length(center)==ncol(y)){
     y.m<-center
   } else{
     stop("center parameter wrong dimension")
   }
 
-  if(class(scale)=='logical' & length(scale)==1){
+  if(inherits(scale,'logical') & length(scale)==1){
     y.s<-apply(y,2,sd)
     if(!scale)
       y.s<-rep(1,ncol(y))
-  } else if(class(scale)=='numeric' & length(scale)==ncol(y)){
+  } else if(inherits(scale,'numeric') & length(scale)==ncol(y)){
     y.s<-scale
   } else{
     stop("scale parameter wrong dimension")

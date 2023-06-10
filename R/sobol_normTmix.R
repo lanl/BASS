@@ -39,7 +39,7 @@
 #' # See examples in bass documentation.
 #'
 sobol<-function(bassMod,prior=NULL,prior.func=NULL,mcmc.use=NULL,func.var=NULL,xx.func.var=NULL,verbose=TRUE,getEffects=FALSE){
-  if(class(bassMod)!='bass')
+  if(!inherits(bassMod,'bass'))
     stop('First input needs to be a bass object')
   if(bassMod$p==1 & !bassMod$func)
     stop('Sobol only used for multiple input models')

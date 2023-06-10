@@ -23,7 +23,7 @@
 #' # See examples in bass documentation.
 #'
 plot.bass<-function(x,quants=c(.025,.975),...){
-  if(class(x)!='bass')
+  if(!inherits(x,'bass'))
     stop('x must be an object of class bass')
   pred<-T
   if(is.null(x$yhat.mean))
@@ -78,7 +78,7 @@ plot.bass<-function(x,quants=c(.025,.975),...){
 #' # See examples in bassBasis documentation.
 #'
 plot.bassBasis<-function(x,quants=c(.025,.975),pred=T,...){
-  if(class(x)!='bassBasis')
+  if(!inherits(x,'bassBasis'))
     stop('x must be an object of class bassBasis')
   op<-par(no.readonly=T)
   if(pred)

@@ -48,7 +48,7 @@ calibrate.bassBasis(
 
 \item{decor.step.every}{integer number of MCMC iterations between decorrelation steps.}
 
-\item{verbose}{}
+\item{verbose}{logical, whether to print progress.}
 }
 \value{
 An object
@@ -104,7 +104,8 @@ plot(sens)
 
 ## calibration
 x.true<-runif(9,0,1) # what we are trying to learn
-yobs<-f(cbind(xfunc,kronecker(rep(1,nfunc),t(x.true)))) + rnorm(nfunc,0,.1) # calibration data (with measurement error)
+yobs<-f(cbind(xfunc,kronecker(rep(1,nfunc),t(x.true)))) +
+  rnorm(nfunc,0,.1) # calibration data (with measurement error)
 plot(yobs)
 
 cal<-calibrate.bassBasis(y=yobs,mod=mod,
@@ -123,7 +124,8 @@ uu<-seq(nburn,10000,5)
 
 pairs(rbind(cal$theta[uu,1,],x.true),col=c(rep(1,length(uu)),2),ylim=c(0,1),xlim=c(0,1))
 
-pred<-apply(predict(mod,cal$theta[uu,1,],nugget = T,trunc.error = T,mcmc.use = cal$ii[uu]),3,function(x) diag(x)+rnorm(length(uu),0,sqrt(cal$s2[uu,1,1])))
+pred<-apply(predict(mod,cal$theta[uu,1,],nugget = T,trunc.error = T,
+      mcmc.use = cal$ii[uu]),3,function(x) diag(x)+rnorm(length(uu),0,sqrt(cal$s2[uu,1,1])))
 qq<-apply(pred,2,quantile,probs=c(.025,.975))
 matplot(t(qq),col='lightgrey',type='l')
 lines(yobs,lwd=3)
