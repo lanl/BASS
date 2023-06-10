@@ -433,32 +433,65 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
 
     ## parallel tempering swap
 
+    # if(i>start.temper){# & (i%%20==0)){ #only start after a certain point, and only try every 20
+    #   # sample temp.ind.swap from 1:(ntemps-1), then swap with temp.ind.swap+1
+    #   temp.ind.swap1<-sample(1:(ntemps-1),size=1) # corresponds to temperature temp.ladder[temp.ind.swap1]
+    #   temp.ind.swap2<-temp.ind.swap1+1 # always use the neighboring chain on the right
+    #   chain.ind1<-which(temp.ind==temp.ind.swap1) # which chain has temperature temp.ladder[temp.ind.swap1]
+    #   chain.ind2<-which(temp.ind==temp.ind.swap2)
+    #   alpha.swap<-(data$itemp.ladder[temp.ind.swap1]-data$itemp.ladder[temp.ind.swap2])*(curr.list[[chain.ind2]]$lpost-curr.list[[chain.ind1]]$lpost)
+    #   if(is.nan(alpha.swap) | is.na(alpha.swap)){
+    #     alpha.swap<- -9999
+    #     warning('large values of temp.ladder too large')
+    #   }
+    #   count.swap.prop[temp.ind.swap1]<-count.swap.prop[temp.ind.swap1]+1
+    #   #browser()
+    #   if(log(runif(1)) < alpha.swap){
+    #     # swap temperatures
+    #     temp.ind[chain.ind1]<-temp.ind.swap2
+    #     temp.ind[chain.ind2]<-temp.ind.swap1
+    #     curr.list[[chain.ind1]]$temp.ind<-temp.ind.swap2
+    #     curr.list[[chain.ind2]]$temp.ind<-temp.ind.swap1
+    #
+    #     count.swap[temp.ind.swap1]<-count.swap[temp.ind.swap1]+1
+    #     count.swap1000[temp.ind.swap1]<-count.swap1000[temp.ind.swap1]+1
+    #     swap[i]<-temp.ind.swap1
+    #     if(temp.ind.swap1==1){
+    #       cmod<-T # we changed models
+    #       cold.chain<-chain.ind2 #which(temp.ind==1)
+    #     }
+    #   }
+    # }
+
     if(i>start.temper){# & (i%%20==0)){ #only start after a certain point, and only try every 20
       # sample temp.ind.swap from 1:(ntemps-1), then swap with temp.ind.swap+1
-      temp.ind.swap1<-sample(1:(ntemps-1),size=1) # corresponds to temperature temp.ladder[temp.ind.swap1]
-      temp.ind.swap2<-temp.ind.swap1+1 # always use the neighboring chain on the right
-      chain.ind1<-which(temp.ind==temp.ind.swap1) # which chain has temperature temp.ladder[temp.ind.swap1]
-      chain.ind2<-which(temp.ind==temp.ind.swap2)
-      alpha.swap<-(data$itemp.ladder[temp.ind.swap1]-data$itemp.ladder[temp.ind.swap2])*(curr.list[[chain.ind2]]$lpost-curr.list[[chain.ind1]]$lpost)
-      if(is.nan(alpha.swap) | is.na(alpha.swap)){
-        alpha.swap<- -9999
-        warning('large values of temp.ladder too large')
-      }
-      count.swap.prop[temp.ind.swap1]<-count.swap.prop[temp.ind.swap1]+1
-      #browser()
-      if(log(runif(1)) < alpha.swap){
-        # swap temperatures
-        temp.ind[chain.ind1]<-temp.ind.swap2
-        temp.ind[chain.ind2]<-temp.ind.swap1
-        curr.list[[chain.ind1]]$temp.ind<-temp.ind.swap2
-        curr.list[[chain.ind2]]$temp.ind<-temp.ind.swap1
+      for(dummy in 1:ntemps){
+        ts<-sort(sample(1:ntemps,size=2))
+        temp.ind.swap1<-ts[1]#sample(1:(ntemps-1),size=1) # corresponds to temperature temp.ladder[temp.ind.swap1]
+        temp.ind.swap2<-ts[2]#temp.ind.swap1+1 # always use the neighboring chain on the right
+        chain.ind1<-which(temp.ind==temp.ind.swap1) # which chain has temperature temp.ladder[temp.ind.swap1]
+        chain.ind2<-which(temp.ind==temp.ind.swap2)
+        alpha.swap<-(data$itemp.ladder[temp.ind.swap1]-data$itemp.ladder[temp.ind.swap2])*(curr.list[[chain.ind2]]$lpost-curr.list[[chain.ind1]]$lpost)
+        if(is.nan(alpha.swap) | is.na(alpha.swap)){
+          alpha.swap<- -9999
+          warning('large values of temp.ladder too large')
+        }
+        count.swap.prop[temp.ind.swap1]<-count.swap.prop[temp.ind.swap1]+1
+        #browser()
+        if(log(runif(1)) < alpha.swap){
+          # swap temperatures
+          temp.ind[chain.ind1]<-temp.ind.swap2
+          temp.ind[chain.ind2]<-temp.ind.swap1
+          curr.list[[chain.ind1]]$temp.ind<-temp.ind.swap2
+          curr.list[[chain.ind2]]$temp.ind<-temp.ind.swap1
 
-        count.swap[temp.ind.swap1]<-count.swap[temp.ind.swap1]+1
-        count.swap1000[temp.ind.swap1]<-count.swap1000[temp.ind.swap1]+1
-        swap[i]<-temp.ind.swap1
-        if(temp.ind.swap1==1){
-          cmod<-T # we changed models
-          cold.chain<-chain.ind2 #which(temp.ind==1)
+          count.swap[temp.ind.swap1]<-count.swap[temp.ind.swap1]+1
+          count.swap1000[temp.ind.swap1]<-count.swap1000[temp.ind.swap1]+1
+          swap[i]<-temp.ind.swap1
+          if(temp.ind.swap1==1){
+            cmod<-T # we changed models
+            cold.chain<-chain.ind2 #which(temp.ind==1)
+          }
         }
       }
     }
