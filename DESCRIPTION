@@ -12,8 +12,7 @@ License: GPL-3
 Suggests: 
     R.rsp,
     testthat (>= 2.1.0),
-    parallel,
-    MASS
+    parallel
 VignetteBuilder: R.rsp
 Imports: truncdist, hypergeo
 RoxygenNote: 7.2.3
