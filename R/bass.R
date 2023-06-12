@@ -57,17 +57,19 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   ########################################################################
   ## setup
 
+  ## check inputs
+
   ## KR: Development: These arguments will need to be passed to the function and documented, eventually
   birth.type <- 'coinflip'      # Proposal type should be "NKD" (default) or "coinflip"
   w3 <- c(1, 2, 3)              # Tuning parameters for proposal, c(epsilon, alpha, num_passes)
   #maxExpectedInt <- 3           # Maximum value for p0, the expected interaction order (maxInt should be set to p for "coinflip")
+  maxExpectedInt <- maxInt
+  maxInt <- ncol(xx)
   nint.prior <- rep(1, maxInt)  # A vector of weights for prior distribution of interaction order (length maxInt)
   nint.proposal <- (1:maxEpectedInt)^(-1) # A vector of sampling weights for "coinflip" proposal distribution (length maxExpectedInt)
   #' Notes:
   #' when birth.type = "coinflip", maxInt should probably be set to p = ncol(X)
   #' w1 and w2 are not used
-
-  ## check inputs
 
   #KR: check inputs
   if(!(birth.type %in% c('NKD', 'coinflip')))
@@ -84,6 +86,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
     if(length(nint.prior) != maxExpectedInt)
       stop('invalid nint.prior, should have length ncol(xx)')
   }
+
 
   if(!posInt(maxInt))
     stop('invalid maxInt')

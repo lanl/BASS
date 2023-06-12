@@ -42,7 +42,7 @@ makeCoinWeights <- function(eta, p0, w3){
 }
 
 
-genCandBasisCoinflip<-function(minInt,maxExpectedInt,eta.vec,nint.proposal,p,xxt,degree,xx.unique.ind,vars.len,prior){
+genCandBasisCoinflip<-function(minInt,maxExpectedInt,eta.vec,nint.proposal,p,xxt,degree,xx.unique.ind,vars.len,prior,w3){
   # get number of variables in interaction
   p0 <- sample(minInt:maxExpectedInt, size=1, prob=nint.proposal)
   wts <- makeCoinWeights(eta.vec, p0, w3)

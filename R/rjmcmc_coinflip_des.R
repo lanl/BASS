@@ -9,9 +9,9 @@
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
 birth_coinflip_des<-function(curr,prior,data){
-  cand.des<-genCandBasisCoinflip(minInt=prior$minInt,maxInt=prior$maxInt.des,I.vec=curr$I.vec.des,
-                         z.vec=curr$z.vec.des,p=data$pdes,xxt=data$xxt.des,q=prior$q,
-                         xx.unique.ind=data$unique.ind.des,vars.len=data$vars.len.des,prior)
+  cand.des<-genCandBasisCoinflip(minInt=prior$minInt,maxExpectedInt=prior$maxExpectedInt.des,eta.vec=curr$eta.star.des,
+                         nint.proposal=curr$nint.proposal,p=data$pdes,xxt=data$xxt.des,degree=prior$q,
+                         xx.unique.ind=data$unique.ind.des,vars.len=data$vars.len.des,prior=prior,w3=curr$w3)
 
   if(sum(cand.des$basis!=0)<prior$npart.des){
     return(curr)
@@ -64,14 +64,26 @@ death_coinflip_des<-function(curr,prior,data){
   if(!fullRank){
     return(curr) # TODO: not sure why I need this, I shouldn't need it in theory
   }
-  I.star.des<-curr$I.star.des
-  I.star.des[curr$n.int.des[basis]]<-I.star.des[curr$n.int.des[basis]]-1
-  I.vec.des<-I.star.des/sum(I.star.des)
-  z.star.des<-curr$z.star.des
-  z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]<-z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]-1
-  z.vec.des<-z.star.des/sum(z.star.des)
+  #KR:
+  #I.star.des<-curr$I.star.des
+  #I.star.des[curr$n.int.des[basis]]<-I.star.des[curr$n.int.des[basis]]-1
+  #I.vec.des<-I.star.des/sum(I.star.des)
+  #z.star.des<-curr$z.star.des
+  #z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]<-z.star.des[curr$vars.des[basis,1:curr$n.int.des[basis]]]-1
+  #z.vec.des<-z.star.des/sum(z.star.des)
 
-  lpbmcmp<-logProbChangeMod(curr$n.int.des[basis],curr$vars.des[basis,1:curr$n.int.des[basis]],I.vec.des,z.vec.des,data$pdes,data$vars.len.des,prior$maxInt.des,prior$miC)
+  eta.star.des<-curr$eta.star.des
+  eta.star.des[curr$n.int.des[basis]]<-eta.star.des[curr$n.int.des[basis]]-1
+  vars.cand <- curr$vars.des[basis,1:curr$n.int.des[basis]]
+  lprob_tmp <- 0
+  for(jj in 1:prior$maxExpectedInt){
+    wts.j <- makeCoinWeights(eta.star.des, jj, curr$w3)
+    term_j <- log(curr$nint.proposal[jj]) + sum(log(wts.j[vars.cand])) + sum(log(1 - wts.j[-vars.cand]))
+    lprob_tmp <- lprob_tmp + exp(term_j)
+  }
+  delayedRejectionTerm <- log(lprob_tmp)
+
+  lpbmcmp<-logProbChangeModCoinflip(curr$n.int.des[basis],vars.cand,data$pdes,data$vars.len.des,prior$nint.prior,prior$miC,delayedRejectionTerm)
 
   # calculate log acceptance probability
   alpha<- data$itemp.ladder[curr$temp.ind]*(
