@@ -49,7 +49,7 @@
 #' @export
 #' @import stats
 #' @import utils
-#' @example inst/examples.R
+#' @examples inst/examples.R
 #'
 bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,maxBasis=1000,npart=NULL,npart.func=NULL,nmcmc=10000,nburn=9000,thin=1,g1=0,g2=0,s2.lower=0,h1=10,h2=10,a.tau=.5,b.tau=NULL,w1=5,w2=5,beta.prior='g',temp.ladder=NULL,start.temper=NULL,curr.list=NULL,save.yhat=TRUE,small=FALSE,verbose=TRUE,ret.str=F){
 
@@ -58,9 +58,9 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   ## setup
 
   ## KR: Development: These arguments will need to be passed to the function and documented, eventually
-  birth.type <- "coinflip"      # Proposal type should be "NKD" (default) or "coinflip"
+  birth.type <- 'coinflip'      # Proposal type should be "NKD" (default) or "coinflip"
   w3 <- c(1, 2, 3)              # Tuning parameters for proposal, c(epsilon, alpha, num_passes)
-  maxExpectedInt <- 3           # Maximum value for p0, the expected interaction order (maxInt should be set to p for "coinflip")
+  #maxExpectedInt <- 3           # Maximum value for p0, the expected interaction order (maxInt should be set to p for "coinflip")
   nint.prior <- rep(1, maxInt)  # A vector of weights for prior distribution of interaction order (length maxInt)
   nint.proposal <- (1:maxEpectedInt)^(-1) # A vector of sampling weights for "coinflip" proposal distribution (length maxExpectedInt)
   #' Notes:
@@ -68,6 +68,22 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   #' w1 and w2 are not used
 
   ## check inputs
+
+  #KR: check inputs
+  if(!(birth.type %in% c('NKD', 'coinflip')))
+    stop('invalid birth.type')
+  if(min(w3) < 0 | !posInt(w3[3]))
+    stop('invalid w3')
+  if(birth.type == 'coinflip'){
+    maxExpectedInt <- maxInt
+    maxInt <- ncol(xx)
+    nint.prior < nint.prior/sum(nint.prior)
+    nint.proposal < nint.proposal/sum(nint.proposal)
+    if(length(nint.proposal) != maxExpectedInt)
+      stop('invalid nint.proposal, should have length maxInt')
+    if(length(nint.prior) != maxExpectedInt)
+      stop('invalid nint.prior, should have length ncol(xx)')
+  }
 
   if(!posInt(maxInt))
     stop('invalid maxInt')
@@ -176,7 +192,13 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   pdes<-length(des.vars)
   pcat<-length(cat.vars)
 
-  type<-''
+  #KR:
+  #type<-''
+  if(birth.type == 'coinflip'){
+    type='_coinflip'
+  }else{
+    type<-''
+  }
   if(des)
     type<-paste(type,'des',sep='_')
   if(cat)
@@ -306,6 +328,12 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   prior$beta.gprior.ind<-as.numeric(beta.prior=='g')
   prior$beta.jprior.ind<-as.numeric(beta.prior=='jeffreys')
 
+  #KR:
+  if(birth.type == 'coinflip'){
+    prior$maxExpectedInt <- maxExpectedInt
+    prior$nint.prior <- nint.prior
+  }
+
 
   ## make an object to store current MCMC state (one for each temperature)
 
@@ -320,6 +348,13 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
         curr.list[[i]]$z.star.des<-rep(w2,data$pdes)
         curr.list[[i]]$z.vec.des<-curr.list[[i]]$z.star.des/sum(curr.list[[i]]$z.star.des)
         curr.list[[i]]$des.basis<-matrix(rep(1,data$ndes))
+
+        #KR: coinflip stuff
+        if(birth.type == 'coinflip'){
+          curr.list[[i]]$eta.star.des <- rep(w3[1], prior$maxInt.des+prior$miC)
+          curr.list[[i]]$nint.proposal <- nint.proposal
+          curr.list[[i]]$w3 <- w3
+        }
       }
       if(cat){
         curr.list[[i]]$I.star.cat<-rep(w1,prior$maxInt.cat+prior$miC)

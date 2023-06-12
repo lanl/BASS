@@ -126,3 +126,6 @@ getQf<-function(XtX,Xty){
   }
 }
 
+
+
+
