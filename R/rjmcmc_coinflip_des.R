@@ -9,7 +9,7 @@
 ## perform RJMCMC step (birth, death, or change)
 ########################################################################
 birth_coinflip_des<-function(curr,prior,data){
-  cand.des<-genCandBasisCoinflip(minInt=prior$minInt,maxExpectedInt=prior$maxExpectedInt.des,eta.vec=curr$eta.star.des,
+  cand.des<-genCandBasisCoinflip(minInt=prior$minInt,maxExpectedInt=prior$maxExpectedInt,eta.vec=curr$eta.star.des,
                          nint.proposal=curr$nint.proposal,p=data$pdes,xxt=data$xxt.des,degree=prior$q,
                          xx.unique.ind=data$unique.ind.des,vars.len=data$vars.len.des,prior=prior,w3=curr$w3)
 
@@ -48,7 +48,7 @@ birth_coinflip_des<-function(curr,prior,data){
   ## assign new values
   if(log(runif(1)) < alpha){
     curr<-addBasis(curr,cand.des,qf.cand.list,prior)
-    curr<-addBasisDes(curr,cand.des,qf.cand.list,prior)
+    curr<-addBasisDesCoinflip(curr,cand.des,qf.cand.list,prior)
     # if type has cat and des, want to update curr$dc.basis also
   }
   return(curr)
@@ -99,13 +99,13 @@ death_coinflip_des<-function(curr,prior,data){
   )
 
   if(log(runif(1)) < alpha){
-    curr<-deleteBasis(curr,basis,ind,qf.cand.list,I.star.des,I.vec.des,z.star.des,z.vec.des)
-    curr<-deleteBasisDes(curr,basis,ind,qf.cand.list,I.star.des,I.vec.des,z.star.des,z.vec.des)
+    curr<-deleteBasis(curr,basis,ind,qf.cand.list,I.star.des,I.vec.des,z.star.des,z.vec.des) #KR: this takes I's and z's but doesn't seem to use them?
+    curr<-deleteBasisDesCoinflip(curr,basis,ind,qf.cand.list,eta.star.des)
   }
   return(curr)
 }
 
-
+# No difference from change_des
 change_coinflip_des<-function(curr,prior,data){
   basis<-sample(1:curr$nbasis,size=1)
   int.change<-sample(1:(curr$n.int.des[basis]),size=1)
@@ -138,14 +138,8 @@ change_coinflip_des<-function(curr,prior,data){
 
   if(log(runif(1))<alpha){
     curr<-changeBasis(curr,cand.des,basis,qf.cand.list,XtX.cand,Xty.cand)
-    curr<-changeBasisDes(curr,cand.des,basis,qf.cand.list,XtX.cand,Xty.cand)
+    curr<-changeBasisDesCoinflip(curr,cand.des,basis,qf.cand.list,XtX.cand,Xty.cand)
   }
   return(curr)
 }
-
-
-
-
-
-
 

@@ -8,7 +8,7 @@
 #' @param epsilon Tuning parameter (non-negative). A laplace smoother, larger values lead to more uniform sampling.
 #' @param num_passes Number of passes for the deterministic weight generator.
 #' @return A vector of coin flip weights
-#' @details Generates coin flip weights
+#' @details Generates coin flip weights.
 #' @export
 #' @examples
 #' p <- 20
@@ -43,6 +43,7 @@ makeCoinWeights <- function(eta, p0, w3){
 
 
 genCandBasisCoinflip<-function(minInt,maxExpectedInt,eta.vec,nint.proposal,p,xxt,degree,xx.unique.ind,vars.len,prior,w3){
+  #browser()
   # get number of variables in interaction
   p0 <- sample(minInt:maxExpectedInt, size=1, prob=nint.proposal)
   wts <- makeCoinWeights(eta.vec, p0, w3)
@@ -100,4 +101,59 @@ logProbChangeModCoinflip<-function(n.int,vars,p,vars.len,nint.prior,miC,delayedR
   )
   out <- lprop + lprior
   return(out)
+}
+
+# No difference from getYhat_des
+getYhat_coinflip_des<-function(curr,nb){
+  curr$des.basis%*%curr$beta
+}
+
+
+addBasisDesCoinflip<-function(curr,cand,qf.cand.list,prior){
+  curr$n.int.des[curr$nbasis]<-cand$n.int
+  fill<-rep(NA,prior$maxInt.des-cand$n.int)
+  curr$knots.des<-rbind(curr$knots.des,c(cand$knots,fill))
+  curr$knotInd.des<-rbind(curr$knotInd.des,c(cand$knotInd,fill))
+  curr$signs.des<-rbind(curr$signs.des,c(cand$signs,fill))
+  curr$vars.des<-rbind(curr$vars.des,c(cand$vars,fill))
+
+  #curr$I.star.des[cand$n.int+prior$miC]<-curr$I.star.des[cand$n.int+prior$miC]+1
+  #curr$I.vec.des<-curr$I.star.des/sum(curr$I.star.des)
+  #curr$z.star.des[cand$vars]<-curr$z.star.des[cand$vars]+1
+  #curr$z.vec.des<-curr$z.star.des/sum(curr$z.star.des)
+
+  curr$eta.star.des[cand$n.int+prior$miC]<-curr$eta.star.des[cand$n.int+prior$miC] + 1
+
+  # basis functions
+  curr$des.basis<-cbind(curr$des.basis,cand$basis)
+  return(curr)
+}
+
+
+deleteBasisDesCoinflip<-function(curr,basis,ind,qf.cand.list,eta.star){
+  curr$n.int.des<-curr$n.int.des[-basis]
+  curr$knots.des<-curr$knots.des[-basis,,drop=F]
+  curr$knotInd.des<-curr$knotInd.des[-basis,,drop=F]
+  curr$signs.des<-curr$signs.des[-basis,,drop=F]
+  curr$vars.des<-curr$vars.des[-basis,,drop=F]
+  #curr$I.star.des<-I.star
+  #curr$I.vec.des<-I.vec
+  #curr$z.star.des<-z.star
+  #curr$z.vec.des<-z.vec
+  curr$eta.star.des <- eta.star
+  # basis functions
+  curr$des.basis<-curr$des.basis[,-(basis+1),drop=F]
+  return(curr)
+}
+
+
+# No change from changeBasisDes
+changeBasisDesCoinflip<-function(curr,cand,basis,qf.cand.list,XtX.cand,Xty.cand){
+  # basis characteristics
+  curr$knots.des[basis,1:curr$n.int.des[basis]]<-cand$knots
+  curr$knotInd.des[basis,1:curr$n.int.des[basis]]<-cand$knotInd
+  curr$signs.des[basis,1:curr$n.int.des[basis]]<-cand$signs
+  # basis functions
+  curr$des.basis[,basis+1]<-cand$basis
+  return(curr)
 }

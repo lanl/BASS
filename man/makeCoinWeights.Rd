@@ -24,7 +24,7 @@ A vector of coin flip weights
 Finds probabilities for each coins based on count vector and tuning parameters
 }
 \details{
-Generates coin flip weights
+Generates coin flip weights.
 }
 \examples{
 p <- 20

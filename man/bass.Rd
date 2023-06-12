@@ -25,8 +25,12 @@ bass(
   h2 = 10,
   a.tau = 0.5,
   b.tau = NULL,
+  birth.type = "NKD",
   w1 = 5,
   w2 = 5,
+  w3 = c(1, 2, 3),
+  nint.prior = 1/(1:ncol(xx)),
+  nint.proposal = 1/(1:maxInt),
   beta.prior = "g",
   temp.ladder = NULL,
   start.temper = NULL,
@@ -78,9 +82,17 @@ bass(
 
 \item{b.tau}{rate for gamma prior on \eqn{\tau}. Defaults to one over the number of observations, which centers the prior for the basis function weights on the unit information prior.}
 
+\item{birth.type}{default is \code{"NKD"}. Alternative option \code{"coinflip"} allows for exploration of higher-order interaction terms.}
+
 \item{w1}{nominal weight for degree of interaction, used in generating candidate basis functions.  Should be greater than 0.}
 
 \item{w2}{nominal weight for variables, used in generating candidate basis functions.  Should be greater than 0.}
+
+\item{w3}{tuning parameters for generating candidate basis functions when \code{birth.type = "coinflip"}. See \code{makeCoinWeights()} for details.}
+
+\item{nint.prior}{vector of prior probabilities for interaction orders. Ignored unless \code{birth.type = "coinflip"}.}
+
+\item{nint.proposal}{vector of sampling weights for the expected interaction order. Ignored unless \code{birth.type = "coinflip"}.}
 
 \item{beta.prior}{what type of prior to use for basis coefficients, "g" or "jeffreys"}
 
@@ -110,9 +122,6 @@ Explores BASS model space by RJMCMC.  The BASS model has \deqn{y = f(x) + \epsil
 \examples{
 inst/examples.R
 
-Notes:
-when birth.type = "coinflip", maxInt should probably be set to p = ncol(X)
-w1 and w2 are not used
 }
 \seealso{
 \link{predict.bass} for prediction and \link{sobol} for sensitivity analysis.
