@@ -583,6 +583,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   if(type == "_coinflip_des"){
     type <- "_des"
   }
+  print(type)
   out.yhat<-list()
   if(save.yhat){
     out.yhat<-list(yhat.mean=yhat.sum/nmod.max,yhat=yhat)
