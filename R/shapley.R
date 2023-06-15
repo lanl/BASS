@@ -29,18 +29,16 @@
 #' shapley(mod)
 #'
 shapley <- function(bassSob, relative_importance=NULL, proportion=FALSE, mcmc.use=NULL, verbose=TRUE){
-  S <- bassSob$S
-  p <- ncol(bassSob$T)
-  subset_sizes <- unlist(lapply(bassSob$names.ind, length))
   if(is.null(mcmc.use)){
-    mcmc.use <- 1:nrow(S)
+    mcmc.use <- 1:nrow(bassSob$S)
   }
+  SS <- bassSob$S[mcmc.use,]
+  TT <- bassSob$T[mcmc.use,]
   M <- length(mcmc.use)
-  #J <- length(bassSob$names.ind) - 1
-  #if(is.null(truncInt)){
-  #  J <- min(J, truncInt)
-  #}
+  p <- ncol(TT)
   J <- p-1
+  subset_sizes <- unlist(lapply(bassSob$names.ind, length))
+
   if(is.null(relative_importance)){
     relative_importance <- function(j) 1/p
     const <- 1
@@ -50,7 +48,7 @@ shapley <- function(bassSob, relative_importance=NULL, proportion=FALSE, mcmc.us
   if(proportion){
     vt <- 1
   }else{
-    vt <- bassSob$var.tot
+    vt <- bassSob$var.tot[mcmc.use]
   }
   if(verbose)
     cat('Shapley Start',BASS:::myTimestamp(),'Variables:',p,'\n')
@@ -73,7 +71,7 @@ shapley <- function(bassSob, relative_importance=NULL, proportion=FALSE, mcmc.us
     if(verbose)
       cat('Shapley',BASS:::myTimestamp(),'Variable:',i,'\n')
     # empty set
-    shapley[,i] <- bassSob$T[,i]*vt*const*relative_importance(0)
+    shapley[,i] <- TT[,i]*vt*const*relative_importance(0)
     for(j in 1:J){
       #indx_no_i <- !grepl(i, sob$names.ind[[j]])
       #sets_no_i <- bassSob$names.ind[[j]][indx_no_i] # These are sets \mathcal J
@@ -90,7 +88,7 @@ shapley <- function(bassSob, relative_importance=NULL, proportion=FALSE, mcmc.us
         if(length(indx_term) > 0){
           term <- rep(0, M)
           for(ell in indx_term){
-            term <- term + S[,ell]
+            term <- term + SS[,ell]
           }
           shapley[,i] <- shapley[,i] + vt*weight*term
         }
