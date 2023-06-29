@@ -264,8 +264,8 @@ sobol_des<-function(bassMod,mcmc.use,verbose,prior,prior.cat,getEffects){
   var.tot.store<-f0.store<-rep(0,length(mcmc.use))
 
   ngrid<-100
-  xx=seq(0,1,length.out=ngrid) # make a different size xx for each variable...to debug
-  xxt<-t(seq(0,1,length.out=ngrid))
+  #xx=seq(0,1,length.out=ngrid) # make a different size xx for each variable...to debug
+  xxt<-lapply(1:p,function(i) t(seq(0,1,length.out=ngrid+i)))
   effects<-list()
   if(getEffects){
     for(iint in 1:min(length(combs),2)){
