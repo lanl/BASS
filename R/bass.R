@@ -135,7 +135,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
       stop('dimension mismatch between xx.func and y')
     pfunc<-dxf[2]
     range.func<-apply(xx.func,2,range)
-    xx.func<-apply(xx.func,2,scale.range)
+    xx.func<-apply(xx.func,2,scale_range)
   }
 
   if(func){
@@ -159,7 +159,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
   }
   if(des){
     range.des<-apply(xx.des,2,range)
-    xx.des<-apply(xx.des,2,scale.range)
+    xx.des<-apply(xx.des,2,scale_range)
   }
   des.vars<-which(!cx.factor)
   cat.vars<-which(cx.factor)

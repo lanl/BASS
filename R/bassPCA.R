@@ -368,11 +368,11 @@ sobolBasis<-function(mod,int.order,prior=NULL,mcmc.use=NULL,nind=NULL,n.cores=1,
         prior[[i]]$trunc<-c(0,1)
       } else{
         #browser()
-        prior[[i]]$trunc<-scale.range(prior[[i]]$trunc,bassMod$range.des[,i])
+        prior[[i]]$trunc<-scale_range(prior[[i]]$trunc,bassMod$range.des[,i])
       }
 
       if(prior[[i]]$dist %in% c('normal','student')){
-        prior[[i]]$mean<-scale.range(prior[[i]]$mean,bassMod$range.des[,i])
+        prior[[i]]$mean<-scale_range(prior[[i]]$mean,bassMod$range.des[,i])
         prior[[i]]$sd<-prior[[i]]$sd/(bassMod$range.des[2,i]-bassMod$range.des[1,i])
         if(prior[[i]]$dist == 'normal'){
           prior[[i]]$z<-pnorm((prior[[i]]$trunc[2]-prior[[i]]$mean)/prior[[i]]$sd) - pnorm((prior[[i]]$trunc[1]-prior[[i]]$mean)/prior[[i]]$sd)
@@ -858,7 +858,7 @@ get.f0<-function(prior,pc.mod,pc,mcmc.use){ # mcmc.mod.use is mcmc index not mod
 
 
 
-plot.prior<-function(prior,plot=TRUE,n=1000,...){
+plot_prior<-function(prior,plot=TRUE,n=1000,...){
   xx<-seq(prior$trunc[1],prior$trunc[2],length.out=n)
   if(prior$dist=='uniform'){
     out<-dunif(xx,prior$trunc[1],prior$trunc[2])

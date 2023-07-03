@@ -67,11 +67,11 @@ for(i in 1:p){
   prior3[[i]]<-list(dist='uniform',trunc=c(0,pi))
 }
 
-#BASS:::plot.prior(prior1[[1]])
-#BASS:::plot.prior(prior2[[1]])
+#BASS:::plot_prior(prior1[[1]])
+#BASS:::plot_prior(prior2[[1]])
 #curve(dnorm(x,0,1)*2.93,col=2,add=T)
 
-BASS:::plot.prior(prior2[[1]])
+BASS:::plot_prior(prior2[[1]])
 
 
 ss1<-BASS::sobol(mod,prior1)

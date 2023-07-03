@@ -32,7 +32,7 @@ rtgamma<-function(n,upper,shape,rate){
 }
 
 ## scale a vector to be between 0 and 1
-scale.range<-function(x,r=NULL){ # x is a vector
+scale_range<-function(x,r=NULL){ # x is a vector
   if(is.null(r))
     r<-range(x)
   if((r[2]-r[1])==0)

@@ -8,7 +8,7 @@
 ###############################################################
 ## predict methods
 ###############################################################
-scale.range.mat<-function(x,r){
+scale_range_mat<-function(x,r){
   #sweep(sweep(x,2,r[1,]),2,r[2,]-r[1,],FUN='/')
   t((t(x)-r[1,])/c(diff(r)))
   #(x - matrix(r[1,], dim(x)[1], dim(x)[2], byrow = TRUE))/matrix(diff(r), dim(x)[1], dim(x)[2], byrow = TRUE)
@@ -43,7 +43,7 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
       if(is.null(dxf))
         newdata.func<-matrix(newdata.func)
       for(i in 1:ncol(newdata.func)){
-        newdata.func[,i]<-scale.range(newdata.func[,i],object$range.func[,i])
+        newdata.func[,i]<-scale_range(newdata.func[,i],object$range.func[,i])
       }
     }
   } else{
@@ -78,10 +78,10 @@ predict.bass<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
 
   if(ncol(newdata.des)>0){
     # for(i in 1:ncol(newdata.des)){
-    #   newdata.des[,i]<-scale.range(newdata.des[,i],object$range.des[,i])
+    #   newdata.des[,i]<-scale_range(newdata.des[,i],object$range.des[,i])
     # }
     # browser()
-    newdata.des<-scale.range.mat(newdata.des,object$range.des)
+    newdata.des<-scale_range_mat(newdata.des,object$range.des)
   }
   tnewdata.des<-t(newdata.des)
   out<-array(dim=c(length(mcmc.use),nrow(newdata),nrow(newdata.func)))
@@ -126,7 +126,7 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
       if(is.null(dxf))
         newdata.func<-matrix(newdata.func)
       for(i in 1:ncol(newdata.func)){
-        newdata.func[,i]<-scale.range(newdata.func[,i],object$range.func[,i])
+        newdata.func[,i]<-scale_range(newdata.func[,i],object$range.func[,i])
       }
     }
   } else{
@@ -157,7 +157,7 @@ predict_fast<-function(object,newdata,newdata.func=NULL,mcmc.use=NULL,verbose=FA
 
   #if(ncol(newdata.des)>0){
   #  for(i in 1:ncol(newdata.des)){
-  #    newdata.des[,i]<-scale.range(newdata.des[,i],object$range.des[,i])
+  #    newdata.des[,i]<-scale_range(newdata.des[,i],object$range.des[,i])
   #  }
   #}
   tnewdata.des<-t(newdata.des)
