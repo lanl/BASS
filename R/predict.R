@@ -236,12 +236,14 @@ makeBasisMatrixCat<-function(i,nbasis,vars,xx,n.int,sub){
   n<-nrow(xx)
   tbasis.mat<-matrix(nrow=nbasis+1,ncol=n)
   tbasis.mat[1,]<-1
-  for(m in 1:nbasis){
-    if(n.int[i,m]==0){
-      tbasis.mat[m+1,]<-1
-    } else{
-      use<-1:n.int[i,m]
-      tbasis.mat[m+1,]<-makeBasisCat(vars[i,m,use],sub[[i]][[m]],xx)
+  if(nbasis > 0){
+    for(m in 1:nbasis){
+      if(n.int[i,m]==0){
+        tbasis.mat[m+1,]<-1
+      } else{
+        use<-1:n.int[i,m]
+        tbasis.mat[m+1,]<-makeBasisCat(vars[i,m,use],sub[[i]][[m]],xx)
+      }
     }
   }
   return(tbasis.mat)
