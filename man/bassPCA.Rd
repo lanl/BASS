@@ -36,7 +36,7 @@ bassPCA(
 
 \item{scale}{logical whether to divide by the standard deviation before getting the principal components, or else a numeric vector of dimension m for the scale to be used}
 
-\item{...}{arguements to be passed to \code{bass} function calls.}
+\item{...}{arguments to be passed to \code{bass} function calls.}
 }
 \value{
 An object of class 'bassBasis' with two elements:

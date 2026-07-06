@@ -46,7 +46,7 @@ If non-functional (\code{func.var = NULL}), a list with two elements:
 Decomposes the variance of the BASS model into variance due to main effects, two way interactions, and so on, similar to the ANOVA decomposition for linear models.  Uses the Sobol' decomposition, which can be done analytically for MARS models.
 }
 \details{
-Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
+Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yielding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
 }
 \examples{
 # See examples in bass documentation.

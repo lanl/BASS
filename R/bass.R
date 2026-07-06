@@ -179,7 +179,7 @@ bass<-function(xx,y,maxInt=3,maxInt.func=3,maxInt.cat=3,xx.func=NULL,degree=1,ma
 
   # so cases are des, cat, des_cat, des_func, cat_func, des_cat_func
 
-  ## handle tempering arguements
+  ## handle tempering arguments
 
   if(is.null(temp.ladder)){
     temp.ladder<-1

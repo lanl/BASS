@@ -21,7 +21,7 @@
 #' @param xx.func.var grid for functional variable specified by \code{func.var}.  Disregard if \code{func.var} is not specified.  If \code{func.var} is specified and \code{xx.func.var} not specified, the grid used to fit \code{bass} will be used.
 #' @param verbose logical; should progress be displayed?
 #' @param getEffects logical; should Sobols ANOVA decomposition be computed?
-#' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
+#' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yielding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
 #' @return If non-functional (\code{func.var = NULL}), a list with two elements:
 #'  \item{S}{a data frame of sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular main effect or interaction.  The values are the proportion of variance in the model that is due to each main effect or interaction.}
 #'  \item{T}{a data frame of total sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular variable.}
@@ -1305,4 +1305,3 @@ VuInt_des_func<-function(u,tl){
     browser()
   return(add)
 }
-

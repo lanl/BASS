@@ -22,7 +22,7 @@
 #' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param center logical whether to subtract the mean before getting the principal components, or else a numeric vector of dimension m for the center to be used
 #' @param scale logical whether to divide by the standard deviation before getting the principal components, or else a numeric vector of dimension m for the scale to be used
-#' @param ... arguements to be passed to \code{bass} function calls.
+#' @param ... arguments to be passed to \code{bass} function calls.
 #' @details Gets the PCA decomposition of the response \code{y}, and fits a bass model to each PCA basis coefficient, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.
 #' @return An object of class 'bassBasis' with two elements:
 #'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
@@ -112,7 +112,7 @@ bassPCAsetup<-function(xx,y,n.pc=NULL,perc.var=99,center=T,scale=F){
 #' @param dat list that includes elements \code{xx}, \code{n.pc} (number of basis functions), \code{basis} (dimension m x \code{n.pc}), \code{newy} (dimension \code{n.pc} x n), \code{trunc.error} (optional truncation error with dimension n x m), \code{y.m} (vector mean removed before basis decomposition with dimension m), \code{y.s} (vector sd scaled before basis decomposition with dimension m).  See the documentation of \code{bassPCA} for more details.
 #' @param n.cores integer number of cores (threads) to use
 #' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
-#' @param ... arguements to be passed to \code{bass} function calls.
+#' @param ... arguments to be passed to \code{bass} function calls.
 #' @details Under a user defined basis decomposition, fits a bass model to each PCA basis coefficient independently, \code{bass(dat$xx,dat$newy[i,],...)} for \code{i in 1 to n.pc}, possibly in parallel.  The basis does not need to be orthogonal, but independent modeling of basis coefficients should be sensible.
 #' @return An object of class 'bassBasis' with two elements:
 #'   \item{mod.list}{list (of length \code{n.pc}) of individual bass models}
@@ -289,7 +289,7 @@ truncErrSampN<-function(n,te.mat){ # a function to quickly sample one of the tru
 #' @param parType either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.
 #' @param plot logical; whether to plot results.
 #' @param verbose logical; print progress.
-#' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yeilding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
+#' @details Performs analytical Sobol' decomposition for each MCMC iteration in mcmc.use (each corresponds to a MARS model), yielding a posterior distribution of sensitivity indices.  Can obtain Sobol' indices as a function of one functional variable.
 #' @return If non-functional (\code{func.var = NULL}), a list with two elements:
 #'  \item{S}{a data frame of sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular main effect or interaction.  The values are the proportion of variance in the model that is due to each main effect or interaction.}
 #'  \item{T}{a data frame of total sensitivity indices with number of rows matching the length of \code{mcmc.use}.  The columns are named with a particular variable.}
@@ -910,5 +910,3 @@ sample.prior<-function(prior,n){
   }
   out
 }
-
-

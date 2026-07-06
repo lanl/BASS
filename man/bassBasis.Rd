@@ -13,7 +13,7 @@ bassBasis(dat, n.cores = 1, parType = "fork", ...)
 
 \item{parType}{either "fork" or "socket".  Forking is typically faster, but not compatible with Windows. If \code{n.cores==1}, \code{parType} is ignored.}
 
-\item{...}{arguements to be passed to \code{bass} function calls.}
+\item{...}{arguments to be passed to \code{bass} function calls.}
 }
 \value{
 An object of class 'bassBasis' with two elements:
