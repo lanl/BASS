@@ -1,3 +1,6 @@
+# BASS (development version)
+- new `bass_sampler()`: a BASS chain (continuous inputs, scalar response, no tempering) that can be advanced a few iterations at a time with a response that changes between calls, for use as one block of a larger Gibbs sampler. Options for no intercept, basis functions centred over the training inputs, and a fixed residual variance; `$as_bass()` gives the saved draws as a `"bass"` object.
+
 # BASS 1.3.1
 - vignette now static to decrease CRAN burden
 - other CRAN changes
